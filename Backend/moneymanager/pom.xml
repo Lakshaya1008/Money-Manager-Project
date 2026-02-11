@@ -83,6 +83,7 @@
 			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+		<!-- Cache dependencies removed - caching was causing authentication issues -->
 	</dependencies>
 
 	<build>

@@ -11,7 +11,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "tbl_profiles")
+@Table(name = "tbl_profiles", indexes = {
+    @Index(name = "idx_email", columnList = "email"),
+    @Index(name = "idx_activation_token", columnList = "activation_token")
+})
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -32,6 +35,7 @@ public class ProfileEntity {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
     private Boolean isActive;
+    @Column(name = "activation_token")
     private String activationToken;
 
     @PrePersist

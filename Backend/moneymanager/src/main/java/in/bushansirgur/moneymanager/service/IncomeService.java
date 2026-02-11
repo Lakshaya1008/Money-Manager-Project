@@ -23,11 +23,17 @@ public class IncomeService {
     private final IncomeRepository incomeRepository;
     private final ProfileService profileService;
 
-    // Adds a new expense to the database
+    // Adds a new income to the database
     public IncomeDTO addIncome(IncomeDTO dto) {
         ProfileEntity profile = profileService.getCurrentProfile();
-        CategoryEntity category = categoryRepository.findById(dto.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+
+        if (dto.getCategoryId() == null) {
+            throw new RuntimeException("Category ID is required");
+        }
+
+        CategoryEntity category = categoryRepository.findByIdAndProfileId(dto.getCategoryId(), profile.getId())
+                .orElseThrow(() -> new RuntimeException("Category not found. Please create a category first or use a valid category ID."));
+
         IncomeEntity newExpense = toEntity(dto, profile, category);
         newExpense = incomeRepository.save(newExpense);
         return toDTO(newExpense);

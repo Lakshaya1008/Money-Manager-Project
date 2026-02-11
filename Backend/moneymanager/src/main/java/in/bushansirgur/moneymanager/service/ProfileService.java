@@ -32,6 +32,16 @@ public class ProfileService {
     private String activationURL;
 
     public ProfileDTO registerProfile(ProfileDTO profileDTO) {
+        // Check if email already exists
+        if (profileRepository.findByEmail(profileDTO.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already registered. Please login instead.");
+        }
+
+        // Validate password is not empty
+        if (profileDTO.getPassword() == null || profileDTO.getPassword().isEmpty()) {
+            throw new RuntimeException("Password cannot be empty");
+        }
+
         ProfileEntity newProfile = toEntity(profileDTO);
         newProfile.setActivationToken(UUID.randomUUID().toString());
         newProfile = profileRepository.save(newProfile);
@@ -82,6 +92,10 @@ public class ProfileService {
                 .orElse(false);
     }
 
+    public boolean emailExists(String email) {
+        return profileRepository.findByEmail(email).isPresent();
+    }
+
     public ProfileEntity getCurrentProfile() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return profileRepository.findByEmail(authentication.getName())
@@ -116,8 +130,14 @@ public class ProfileService {
                     "token", token,
                     "user", getPublicProfile(authDTO.getEmail())
             );
-        } catch (Exception e) {
+        } catch (org.springframework.security.authentication.DisabledException e) {
+            throw new RuntimeException("Account is not activated. Please check your email.");
+        } catch (org.springframework.security.authentication.LockedException e) {
+            throw new RuntimeException("Account is locked. Please contact support.");
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
             throw new RuntimeException("Invalid email or password");
+        } catch (Exception e) {
+            throw new RuntimeException("Authentication failed: " + e.getMessage());
         }
     }
 }

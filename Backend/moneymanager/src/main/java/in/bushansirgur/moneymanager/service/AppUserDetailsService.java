@@ -15,14 +15,21 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class AppUserDetailsService implements UserDetailsService {
     private final ProfileRepository profileRepository;
+
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-
         ProfileEntity existingProfile = profileRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Profile not found with email: " + email));
+
+        boolean isActive = Boolean.TRUE.equals(existingProfile.getIsActive());
+
         return User.builder()
                 .username(existingProfile.getEmail())
                 .password(existingProfile.getPassword())
+                .disabled(!isActive)
+                .accountLocked(false)
+                .accountExpired(false)
+                .credentialsExpired(false)
                 .authorities(Collections.emptyList())
                 .build();
     }
