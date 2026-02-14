@@ -17,22 +17,25 @@ public interface ExpenseRepository extends JpaRepository<ExpenseEntity, Long> {
     List<ExpenseEntity> findByProfileIdOrderByDateDesc(Long profileId);
 
     //select * from tbl_expenses where profile_id = ?1 order by date desc limit 5
-    List<ExpenseEntity> findTop5ByProfileIdOrderByDateDesc(Long profileId);
+    @Query("SELECT e FROM ExpenseEntity e LEFT JOIN FETCH e.category WHERE e.profile.id = :profileId ORDER BY e.date DESC LIMIT 5")
+    List<ExpenseEntity> findTop5ByProfileIdOrderByDateDesc(@Param("profileId") Long profileId);
 
     @Query("SELECT SUM(e.amount) FROM ExpenseEntity e WHERE e.profile.id = :profileId")
     BigDecimal findTotalExpenseByProfileId(@Param("profileId") Long profileId);
 
     //select * from tbl_expenses where profile_id = ?1 and date between ?2 and ?3 and name like %?4%
+    @Query("SELECT e FROM ExpenseEntity e LEFT JOIN FETCH e.category WHERE e.profile.id = :profileId AND e.date BETWEEN :startDate AND :endDate AND LOWER(e.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<ExpenseEntity> findByProfileIdAndDateBetweenAndNameContainingIgnoreCase(
-            Long profileId,
-            LocalDateTime startDate,
-            LocalDateTime endDate,
-            String keyword,
+            @Param("profileId") Long profileId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("keyword") String keyword,
             Sort sort
     );
 
-    //select * from tbl_expenses where profile_id = ?1 and date between ?2 and ?3
-    List<ExpenseEntity> findByProfileIdAndDateBetween(Long profileId, LocalDateTime startDate, LocalDateTime endDate);
+    //select * from tbl_expenses where profile_id = ?1 and date between ?2 and ?3 with category fetch
+    @Query("SELECT e FROM ExpenseEntity e LEFT JOIN FETCH e.category WHERE e.profile.id = :profileId AND e.date BETWEEN :startDate AND :endDate")
+    List<ExpenseEntity> findByProfileIdAndDateBetween(@Param("profileId") Long profileId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 
     //select * from tbl_expenses where profile_id = ?1 and date = ?2
     List<ExpenseEntity> findByProfileIdAndDate(Long profileId, LocalDate date);
