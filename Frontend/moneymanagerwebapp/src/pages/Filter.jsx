@@ -73,7 +73,7 @@ const Filter = () => {
                             <select value={sortField} id="sortfield" className="w-full border rounded px-3 py-2" onChange={e => setSortField(e.target.value)}>
                                 <option value="date">Date</option>
                                 <option value="amount">Amount</option>
-                                <option value="category">Category</option>
+                                <option value="name">Name</option>
                             </select>
                         </div>
                         <div>

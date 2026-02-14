@@ -29,14 +29,25 @@ axiosConfig.interceptors.request.use((config) => {
     return Promise.reject(error);
 });
 
-//response interceptor
+//response interceptor - Enhanced per API contract error codes
 axiosConfig.interceptors.response.use((response) => {
     return response;
 }, (error) => {
     if(error.response) {
-        if (error.response.status === 401) {
-            window.location.href = "/login";
-        } else if (error.response.status === 500) {
+        const { status, data } = error.response;
+        const errorCode = data?.errorCode;
+
+        // Handle token-related 401 errors (redirect to login)
+        // But NOT login/authentication errors which should show error to user
+        if (status === 401) {
+            const tokenErrors = ['AUTH_TOKEN_MISSING', 'AUTH_TOKEN_INVALID', 'AUTH_TOKEN_EXPIRED'];
+            if (tokenErrors.includes(errorCode)) {
+                // Token issues - clear storage and redirect
+                localStorage.removeItem('token');
+                window.location.href = "/login";
+            }
+            // AUTHENTICATION_ERROR (wrong password, not activated) - let component handle it
+        } else if (status === 500) {
             console.error("Server error. Please try again later");
         }
     } else if(error.code === "ECONNABORTED") {

@@ -77,7 +77,7 @@ const Category = () => {
     }
 
     const handleUpdateCategory = async (updatedCategory) => {
-        const {id, name, type, icon} = updatedCategory;
+        const {id, name, icon} = updatedCategory; // Removed 'type' - per API contract, type cannot be updated
         if (!name.trim()) {
             toast.error("Category Name is required");
             return;
@@ -89,7 +89,8 @@ const Category = () => {
         }
 
         try {
-            await axiosConfig.put(API_ENDPOINTS.UPDATE_CATEGORY(id), {name, type, icon});
+            // Only send name and icon - type is immutable per API contract
+            await axiosConfig.put(API_ENDPOINTS.UPDATE_CATEGORY(id), {name, icon});
             setOpenEditCategoryModal(false);
             setSelectedCategory(null);
             toast.success("Category updated successfully");

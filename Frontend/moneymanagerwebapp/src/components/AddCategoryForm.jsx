@@ -6,7 +6,7 @@ import {LoaderCircle} from "lucide-react";
 const AddCategoryForm = ({onAddCategory, initialCategoryData, isEditing}) => {
     const [category, setCategory] = useState({
         name: "",
-        type: "income",
+        type: "INCOME", // Standardized to UPPERCASE per API contract
         icon: ""
     })
     const [loading, setLoading] = useState(false);
@@ -15,13 +15,14 @@ const AddCategoryForm = ({onAddCategory, initialCategoryData, isEditing}) => {
         if (isEditing && initialCategoryData) {
             setCategory(initialCategoryData);
         } else {
-            setCategory({name: "", type: "income", icon: ""});
+            setCategory({name: "", type: "INCOME", icon: ""});
         }
     }, [isEditing, initialCategoryData]);
 
+    // Category type options - UPPERCASE to match API contract
     const categoryTypeOptions = [
-        {value: "income", label: "Income"},
-        {value: "expense", label: "Expense"},
+        {value: "INCOME", label: "Income"},
+        {value: "EXPENSE", label: "Expense"},
     ]
 
     const handleChange = (key, value) => {

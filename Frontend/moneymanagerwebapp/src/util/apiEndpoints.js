@@ -12,12 +12,13 @@ export const API_ENDPOINTS = {
     CATEGORY_BY_TYPE: (type) => `/categories/${type}`,
     ADD_INCOME: "/incomes",
     DELETE_INCOME: (incomeId) => `/incomes/${incomeId}`,
-    INCOME_EXCEL_DOWNLOAD: "excel/download/income",
+    INCOME_EXCEL_DOWNLOAD: "/excel/download/income", // Fixed: Added leading slash to match API contract
     EMAIL_INCOME: "/email/income-excel",
     GET_ALL_EXPENSE: "/expenses",
     ADD_EXPENSE: "/expenses",
     DELETE_EXPENSE: (expenseId) => `/expenses/${expenseId}`,
-    EXPENSE_EXCEL_DOWNLOAD: "excel/download/expense",
+    EXPENSE_EXCEL_DOWNLOAD: "/excel/download/expense", // Fixed: Added leading slash to match API contract
+    DELETE_CATEGORY: (categoryId) => `/categories/${categoryId}`, // Added: Missing endpoint per API contract
     EMAIL_EXPENSE: "/email/expense-excel",
     APPLY_FILTERS: "/filter",
     DASHBOARD_DATA: "/dashboard",
