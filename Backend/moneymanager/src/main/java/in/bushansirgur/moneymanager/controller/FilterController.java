@@ -33,10 +33,23 @@ public class FilterController {
         }
 
         // Preparing the data or validation
-        LocalDate startDate = filter.getStartDate() != null ? filter.getStartDate() : LocalDate.MIN;
+        // Use start of current year as default instead of LocalDate.MIN (which PostgreSQL can't handle)
+        LocalDate startDate = filter.getStartDate() != null ? filter.getStartDate() : LocalDate.now().withMonth(1).withDayOfMonth(1);
         LocalDate endDate = filter.getEndDate() != null ? filter.getEndDate() : LocalDate.now();
+
+        // Validate date range
+        if (startDate.isAfter(endDate)) {
+            throw new ValidationException("startDate", "Start date cannot be after end date");
+        }
+
         String keyword = filter.getKeyword() != null ? filter.getKeyword() : "";
         String sortField = filter.getSortField() != null ? filter.getSortField() : "date";
+
+        // Validate sort field
+        if (!sortField.equals("date") && !sortField.equals("amount") && !sortField.equals("name")) {
+            throw new ValidationException("sortField", "Invalid sort field '" + sortField + "'. Valid values are: 'date', 'amount', 'name'");
+        }
+
         Sort.Direction direction = "desc".equalsIgnoreCase(filter.getSortOrder()) ? Sort.Direction.DESC : Sort.Direction.ASC;
         Sort sort = Sort.by(direction, sortField);
 
