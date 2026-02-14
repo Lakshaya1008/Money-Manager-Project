@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -39,9 +40,9 @@ public class IncomeService {
             throw new ValidationException("categoryId", "Category ID is required. Please select a category for this income.");
         }
 
-        // Default to current date if not provided
+        // Default to current date and time if not provided
         if (dto.getDate() == null) {
-            dto.setDate(LocalDate.now());
+            dto.setDate(LocalDateTime.now());
         }
 
         CategoryEntity category = categoryRepository.findByIdAndProfileId(dto.getCategoryId(), profile.getId())
@@ -63,8 +64,8 @@ public class IncomeService {
     public List<IncomeDTO> getCurrentMonthIncomesForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
         LocalDate now = LocalDate.now();
-        LocalDate startDate = now.withDayOfMonth(1);
-        LocalDate endDate = now.withDayOfMonth(now.lengthOfMonth());
+        LocalDateTime startDate = now.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime endDate = now.withDayOfMonth(now.lengthOfMonth()).atTime(23, 59, 59);
         List<IncomeEntity> list = incomeRepository.findByProfileIdAndDateBetween(profile.getId(), startDate, endDate);
         return list.stream().map(this::toDTO).toList();
     }
@@ -95,7 +96,7 @@ public class IncomeService {
     }
 
     //filter incomes
-    public List<IncomeDTO> filterIncomes(LocalDate startDate, LocalDate endDate, String keyword, Sort sort) {
+    public List<IncomeDTO> filterIncomes(LocalDateTime startDate, LocalDateTime endDate, String keyword, Sort sort) {
         ProfileEntity profile = profileService.getCurrentProfile();
         List<IncomeEntity> list = incomeRepository.findByProfileIdAndDateBetweenAndNameContainingIgnoreCase(profile.getId(), startDate, endDate, keyword, sort);
         return list.stream().map(this::toDTO).toList();

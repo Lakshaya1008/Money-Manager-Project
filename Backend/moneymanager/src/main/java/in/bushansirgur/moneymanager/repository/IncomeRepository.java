@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface IncomeRepository extends JpaRepository<IncomeEntity, Long> {
@@ -24,12 +24,12 @@ public interface IncomeRepository extends JpaRepository<IncomeEntity, Long> {
     //select * from tbl_incomes where profile_id = ?1 and date between ?2 and ?3 and name like %?4%
     List<IncomeEntity> findByProfileIdAndDateBetweenAndNameContainingIgnoreCase(
             Long profileId,
-            LocalDate startDate,
-            LocalDate endDate,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
             String keyword,
             Sort sort
     );
 
     //select * from tbl_incomes where profile_id = ?1 and date between ?2 and ?3
-    List<IncomeEntity> findByProfileIdAndDateBetween(Long profileId, LocalDate startDate, LocalDate endDate);
+    List<IncomeEntity> findByProfileIdAndDateBetween(Long profileId, LocalDateTime startDate, LocalDateTime endDate);
 }

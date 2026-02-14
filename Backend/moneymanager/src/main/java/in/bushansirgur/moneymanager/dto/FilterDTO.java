@@ -2,14 +2,14 @@ package in.bushansirgur.moneymanager.dto;
 
 import lombok.Data;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class FilterDTO {
 
     private String type;
-    private LocalDate startDate;
-    private LocalDate endDate;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
     private String keyword;
     private String sortField; //date, amount, name
     private String sortOrder; //asc or desc

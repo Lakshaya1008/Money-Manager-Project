@@ -1,15 +1,14 @@
 package in.bushansirgur.moneymanager.repository;
 
 import in.bushansirgur.moneymanager.entity.ExpenseEntity;
-import org.springframework.boot.autoconfigure.data.web.SpringDataWebProperties;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.security.core.parameters.P;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface ExpenseRepository extends JpaRepository<ExpenseEntity, Long> {
@@ -26,14 +25,14 @@ public interface ExpenseRepository extends JpaRepository<ExpenseEntity, Long> {
     //select * from tbl_expenses where profile_id = ?1 and date between ?2 and ?3 and name like %?4%
     List<ExpenseEntity> findByProfileIdAndDateBetweenAndNameContainingIgnoreCase(
             Long profileId,
-            LocalDate startDate,
-            LocalDate endDate,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
             String keyword,
             Sort sort
     );
 
     //select * from tbl_expenses where profile_id = ?1 and date between ?2 and ?3
-    List<ExpenseEntity> findByProfileIdAndDateBetween(Long profileId, LocalDate startDate, LocalDate endDate);
+    List<ExpenseEntity> findByProfileIdAndDateBetween(Long profileId, LocalDateTime startDate, LocalDateTime endDate);
 
     //select * from tbl_expenses where profile_id = ?1 and date = ?2
     List<ExpenseEntity> findByProfileIdAndDate(Long profileId, LocalDate date);

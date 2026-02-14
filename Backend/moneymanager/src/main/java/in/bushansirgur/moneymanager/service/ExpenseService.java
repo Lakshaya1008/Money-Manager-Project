@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -40,9 +41,9 @@ public class ExpenseService {
             throw new ValidationException("categoryId", "Category ID is required. Please select a category for this expense.");
         }
 
-        // Default to current date if not provided
+        // Default to current date and time if not provided
         if (dto.getDate() == null) {
-            dto.setDate(LocalDate.now());
+            dto.setDate(LocalDateTime.now());
         }
 
         CategoryEntity category = categoryRepository.findByIdAndProfileId(dto.getCategoryId(), profile.getId())
@@ -64,8 +65,8 @@ public class ExpenseService {
     public List<ExpenseDTO> getCurrentMonthExpensesForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
         LocalDate now = LocalDate.now();
-        LocalDate startDate = now.withDayOfMonth(1);
-        LocalDate endDate = now.withDayOfMonth(now.lengthOfMonth());
+        LocalDateTime startDate = now.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime endDate = now.withDayOfMonth(now.lengthOfMonth()).atTime(23, 59, 59);
         List<ExpenseEntity> list = expenseRepository.findByProfileIdAndDateBetween(profile.getId(), startDate, endDate);
         return list.stream().map(this::toDTO).toList();
     }
@@ -96,7 +97,7 @@ public class ExpenseService {
     }
 
     //filter expenses
-    public List<ExpenseDTO> filterExpenses(LocalDate startDate, LocalDate endDate, String keyword, Sort sort) {
+    public List<ExpenseDTO> filterExpenses(LocalDateTime startDate, LocalDateTime endDate, String keyword, Sort sort) {
         ProfileEntity profile = profileService.getCurrentProfile();
         List<ExpenseEntity> list = expenseRepository.findByProfileIdAndDateBetweenAndNameContainingIgnoreCase(profile.getId(), startDate, endDate, keyword, sort);
         return list.stream().map(this::toDTO).toList();

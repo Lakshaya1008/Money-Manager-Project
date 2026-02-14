@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -34,8 +35,8 @@ public class FilterController {
 
         // Preparing the data or validation
         // Use start of current year as default instead of LocalDate.MIN (which PostgreSQL can't handle)
-        LocalDate startDate = filter.getStartDate() != null ? filter.getStartDate() : LocalDate.now().withMonth(1).withDayOfMonth(1);
-        LocalDate endDate = filter.getEndDate() != null ? filter.getEndDate() : LocalDate.now();
+        LocalDateTime startDate = filter.getStartDate() != null ? filter.getStartDate() : LocalDate.now().withMonth(1).withDayOfMonth(1).atStartOfDay();
+        LocalDateTime endDate = filter.getEndDate() != null ? filter.getEndDate() : LocalDateTime.now();
 
         // Validate date range
         if (startDate.isAfter(endDate)) {
