@@ -2,12 +2,15 @@ package in.bushansirgur.moneymanager.controller;
 
 import in.bushansirgur.moneymanager.dto.AuthDTO;
 import in.bushansirgur.moneymanager.dto.ProfileDTO;
+import in.bushansirgur.moneymanager.exception.ResourceNotFoundException;
 import in.bushansirgur.moneymanager.service.ProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -23,25 +26,23 @@ public class ProfileController {
     }
 
     @GetMapping("/activate")
-    public ResponseEntity<String> activateProfile(@RequestParam String token) {
+    public ResponseEntity<Map<String, Object>> activateProfile(@RequestParam String token) {
         boolean isActivated = profileService.activateProfile(token);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("timestamp", LocalDateTime.now().toString());
+
         if (isActivated) {
-            return ResponseEntity.ok("Profile activated successfully");
+            response.put("status", HttpStatus.OK.value());
+            response.put("message", "Profile activated successfully. You can now login to your account.");
+            return ResponseEntity.ok(response);
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Activation token not found or already used");
+            throw new ResourceNotFoundException("Activation token not found or already used. Please request a new activation email.");
         }
     }
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody AuthDTO authDTO) {
-        // First check if user exists
-        if (!profileService.emailExists(authDTO.getEmail())) {
-            throw new RuntimeException("No account found with this email. Please register first.");
-        }
-        // Then check if account is active
-        if (!profileService.isAccountActive(authDTO.getEmail())) {
-            throw new RuntimeException("Account is not active. Please activate your account first.");
-        }
+        // All validation is now handled in ProfileService.authenticateAndGenerateToken()
         Map<String, Object> response = profileService.authenticateAndGenerateToken(authDTO);
         return ResponseEntity.ok(response);
     }
