@@ -54,11 +54,11 @@ public class EmailController {
 
     @GetMapping("/test")
     public ResponseEntity<Map<String, Object>> sendTestEmail() {
-        String to = "93d520002@smtp-brevo.com";
+        ProfileEntity profile = profileService.getCurrentProfile();
         String subject = "Test Email from Money Manager";
-        String body = "This is a test email to verify your email configuration.";
-        emailService.sendEmail(to, subject, body);
-        return ResponseEntity.ok(buildSuccessResponse("Test email sent successfully to " + to));
+        String body = "This is a test email to verify your email configuration is working correctly.";
+        emailService.sendEmail(profile.getEmail(), subject, body);
+        return ResponseEntity.ok(buildSuccessResponse("Test email sent successfully to " + profile.getEmail()));
     }
 
     private Map<String, Object> buildSuccessResponse(String message) {

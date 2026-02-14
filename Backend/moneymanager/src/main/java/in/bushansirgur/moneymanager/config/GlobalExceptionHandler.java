@@ -1,6 +1,8 @@
 package in.bushansirgur.moneymanager.config;
 
 import in.bushansirgur.moneymanager.exception.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -19,9 +21,12 @@ import java.util.Map;
 
 /**
  * Global exception handler for consistent error responses across all controllers.
+ * Ensures no sensitive information is leaked in error responses.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     // ============ Custom Application Exceptions ============
 
@@ -114,18 +119,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
-        // Check for common error patterns and provide better messages
-        String message = ex.getMessage();
-        if (message == null || message.isEmpty()) {
-            message = "An unexpected error occurred. Please try again.";
-        }
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, message, "RUNTIME_ERROR");
+        logger.error("Runtime exception occurred: {}", ex.getMessage(), ex);
+        // Return generic message to avoid leaking internal details
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "An error occurred while processing your request. Please try again.", "RUNTIME_ERROR");
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
-        // Log the full exception for debugging
-        ex.printStackTrace();
+        // Log the full exception for debugging (not exposed to client)
+        logger.error("Unexpected error occurred: {}", ex.getMessage(), ex);
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
             "An unexpected error occurred. Please try again later or contact support if the problem persists.",
             "INTERNAL_ERROR");

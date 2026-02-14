@@ -10,6 +10,7 @@
 *.iml
 *.ipr
 *.iws
+.vscode/
 
 # OS
 .DS_Store
@@ -17,8 +18,14 @@ Thumbs.db
 
 # Logs
 *.log
+logs/
 
-# Sensitive files
-src/main/resources/application.properties
-src/main/resources/application-prod.properties
+# Sensitive files - DO NOT COMMIT
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
 
+# Note: application.properties is now safe to commit as it only contains
+# environment variable placeholders, not actual secrets

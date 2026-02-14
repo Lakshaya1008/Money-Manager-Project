@@ -1,0 +1,45 @@
+# ============================================
+# Money Manager - Docker Ignore File
+# ============================================
+# Files to exclude from Docker build context
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+*.iml
+.vscode
+
+# Documentation
+*.md
+!README.md
+postman/
+
+# Build artifacts (we rebuild in container)
+target/
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+src/test/
+
+# Maven wrapper (optional, we copy it explicitly)
+# .mvn/
+
+# Other
+Dockerfile
+docker-compose*.yml
+
