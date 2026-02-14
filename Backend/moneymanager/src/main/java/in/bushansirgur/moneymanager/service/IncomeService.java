@@ -1,11 +1,12 @@
 package in.bushansirgur.moneymanager.service;
 
-import in.bushansirgur.moneymanager.dto.ExpenseDTO;
 import in.bushansirgur.moneymanager.dto.IncomeDTO;
 import in.bushansirgur.moneymanager.entity.CategoryEntity;
-import in.bushansirgur.moneymanager.entity.ExpenseEntity;
 import in.bushansirgur.moneymanager.entity.IncomeEntity;
 import in.bushansirgur.moneymanager.entity.ProfileEntity;
+import in.bushansirgur.moneymanager.exception.ResourceNotFoundException;
+import in.bushansirgur.moneymanager.exception.UnauthorizedException;
+import in.bushansirgur.moneymanager.exception.ValidationException;
 import in.bushansirgur.moneymanager.repository.CategoryRepository;
 import in.bushansirgur.moneymanager.repository.IncomeRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,12 +28,29 @@ public class IncomeService {
     public IncomeDTO addIncome(IncomeDTO dto) {
         ProfileEntity profile = profileService.getCurrentProfile();
 
+        // Validate required fields
+        if (dto.getName() == null || dto.getName().trim().isEmpty()) {
+            throw new ValidationException("name", "Income name is required");
+        }
+        if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ValidationException("amount", "Amount must be greater than zero");
+        }
+        if (dto.getDate() == null) {
+            throw new ValidationException("date", "Date is required");
+        }
         if (dto.getCategoryId() == null) {
-            throw new RuntimeException("Category ID is required");
+            throw new ValidationException("categoryId", "Category ID is required. Please select a category for this income.");
         }
 
         CategoryEntity category = categoryRepository.findByIdAndProfileId(dto.getCategoryId(), profile.getId())
-                .orElseThrow(() -> new RuntimeException("Category not found. Please create a category first or use a valid category ID."));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                    "Category with ID " + dto.getCategoryId() + " not found. Please create this category first or use a valid category ID from your categories list."));
+
+        // Verify the category type is for income
+        if (category.getType() != null && !category.getType().equalsIgnoreCase("INCOME")) {
+            throw new ValidationException("categoryId",
+                "Category '" + category.getName() + "' is not an income category. Please select a category with type 'INCOME'.");
+        }
 
         IncomeEntity newExpense = toEntity(dto, profile, category);
         newExpense = incomeRepository.save(newExpense);
@@ -53,9 +71,9 @@ public class IncomeService {
     public void deleteIncome(Long incomeId) {
         ProfileEntity profile = profileService.getCurrentProfile();
         IncomeEntity entity = incomeRepository.findById(incomeId)
-                .orElseThrow(() -> new RuntimeException("Income not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Income", incomeId));
         if (!entity.getProfile().getId().equals(profile.getId())) {
-            throw new RuntimeException("Unauthorized to delete this income");
+            throw new UnauthorizedException("delete", "income");
         }
         incomeRepository.delete(entity);
     }

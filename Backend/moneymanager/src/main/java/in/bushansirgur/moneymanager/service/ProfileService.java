@@ -3,6 +3,9 @@ package in.bushansirgur.moneymanager.service;
 import in.bushansirgur.moneymanager.dto.AuthDTO;
 import in.bushansirgur.moneymanager.dto.ProfileDTO;
 import in.bushansirgur.moneymanager.entity.ProfileEntity;
+import in.bushansirgur.moneymanager.exception.DuplicateResourceException;
+import in.bushansirgur.moneymanager.exception.ResourceNotFoundException;
+import in.bushansirgur.moneymanager.exception.ValidationException;
 import in.bushansirgur.moneymanager.repository.ProfileRepository;
 import in.bushansirgur.moneymanager.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -32,14 +35,30 @@ public class ProfileService {
     private String activationURL;
 
     public ProfileDTO registerProfile(ProfileDTO profileDTO) {
-        // Check if email already exists
-        if (profileRepository.findByEmail(profileDTO.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already registered. Please login instead.");
+        // Validate email
+        if (profileDTO.getEmail() == null || profileDTO.getEmail().trim().isEmpty()) {
+            throw new ValidationException("email", "Email is required");
+        }
+        if (!isValidEmail(profileDTO.getEmail())) {
+            throw new ValidationException("email", "Invalid email format. Please provide a valid email address.");
         }
 
-        // Validate password is not empty
+        // Check if email already exists
+        if (profileRepository.findByEmail(profileDTO.getEmail()).isPresent()) {
+            throw new DuplicateResourceException("An account with email '" + profileDTO.getEmail() + "' already exists. Please login instead or use a different email.");
+        }
+
+        // Validate full name
+        if (profileDTO.getFullName() == null || profileDTO.getFullName().trim().isEmpty()) {
+            throw new ValidationException("fullName", "Full name is required");
+        }
+
+        // Validate password
         if (profileDTO.getPassword() == null || profileDTO.getPassword().isEmpty()) {
-            throw new RuntimeException("Password cannot be empty");
+            throw new ValidationException("password", "Password is required");
+        }
+        if (profileDTO.getPassword().length() < 6) {
+            throw new ValidationException("password", "Password must be at least 6 characters long");
         }
 
         ProfileEntity newProfile = toEntity(profileDTO);
@@ -51,6 +70,10 @@ public class ProfileService {
         String body = "Click on the following link to activate your account: " + activationLink;
         emailService.sendEmail(newProfile.getEmail(), subject, body);
         return toDTO(newProfile);
+    }
+
+    private boolean isValidEmail(String email) {
+        return email != null && email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     }
 
     public ProfileEntity toEntity(ProfileDTO profileDTO) {
@@ -122,6 +145,24 @@ public class ProfileService {
     }
 
     public Map<String, Object> authenticateAndGenerateToken(AuthDTO authDTO) {
+        // Validate input
+        if (authDTO.getEmail() == null || authDTO.getEmail().trim().isEmpty()) {
+            throw new ValidationException("email", "Email is required");
+        }
+        if (authDTO.getPassword() == null || authDTO.getPassword().isEmpty()) {
+            throw new ValidationException("password", "Password is required");
+        }
+
+        // Check if user exists first
+        ProfileEntity profile = profileRepository.findByEmail(authDTO.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("No account found with email '" + authDTO.getEmail() + "'. Please register first."));
+
+        // Check if account is activated
+        if (!profile.getIsActive()) {
+            throw new in.bushansirgur.moneymanager.exception.AuthenticationException(
+                "Account is not activated. Please check your email for the activation link and activate your account before logging in.");
+        }
+
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authDTO.getEmail(), authDTO.getPassword()));
             //Generate JWT token
@@ -131,13 +172,17 @@ public class ProfileService {
                     "user", getPublicProfile(authDTO.getEmail())
             );
         } catch (org.springframework.security.authentication.DisabledException e) {
-            throw new RuntimeException("Account is not activated. Please check your email.");
+            throw new in.bushansirgur.moneymanager.exception.AuthenticationException(
+                "Account is not activated. Please check your email for the activation link.");
         } catch (org.springframework.security.authentication.LockedException e) {
-            throw new RuntimeException("Account is locked. Please contact support.");
+            throw new in.bushansirgur.moneymanager.exception.AuthenticationException(
+                "Account is locked. Please contact support for assistance.");
         } catch (org.springframework.security.authentication.BadCredentialsException e) {
-            throw new RuntimeException("Invalid email or password");
+            throw new in.bushansirgur.moneymanager.exception.AuthenticationException(
+                "Invalid password. Please check your password and try again.");
         } catch (Exception e) {
-            throw new RuntimeException("Authentication failed: " + e.getMessage());
+            throw new in.bushansirgur.moneymanager.exception.AuthenticationException(
+                "Authentication failed: " + e.getMessage());
         }
     }
 }
