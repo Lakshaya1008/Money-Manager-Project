@@ -1,5 +1,7 @@
 package in.bushansirgur.moneymanager.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import in.bushansirgur.moneymanager.config.FlexibleLocalDateTimeDeserializer;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,7 +21,10 @@ public class ExpenseDTO {
     private String categoryName;
     private Long categoryId;
     private BigDecimal amount;
+
+    @JsonDeserialize(using = FlexibleLocalDateTimeDeserializer.class)
     private LocalDateTime date;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
