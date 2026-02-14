@@ -1134,6 +1134,16 @@ Content-Type: application/json
 
 **Test Case**: Search by Keyword (Case-Insensitive)
 
+**Request URL**: `http://localhost:8081/api/v1.0/filter`
+
+**HTTP Method**: `POST`
+
+**Headers**:
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
+
 **Request Body**:
 ```json
 {
@@ -1153,6 +1163,16 @@ Content-Type: application/json
 ### 5.4 Date Range Test
 
 **Test Case**: Filter by Specific Date Range
+
+**Request URL**: `http://localhost:8081/api/v1.0/filter`
+
+**HTTP Method**: `POST`
+
+**Headers**:
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
 
 **Request Body**:
 ```json
@@ -1175,6 +1195,16 @@ Content-Type: application/json
 
 **Test Case**: Sort by Amount Ascending
 
+**Request URL**: `http://localhost:8081/api/v1.0/filter`
+
+**HTTP Method**: `POST`
+
+**Headers**:
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
+
 **Request Body**:
 ```json
 {
@@ -1194,6 +1224,16 @@ Content-Type: application/json
 ### 5.6 Sorting Descending Test
 
 **Test Case**: Sort by Date Descending
+
+**Request URL**: `http://localhost:8081/api/v1.0/filter`
+
+**HTTP Method**: `POST`
+
+**Headers**:
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
 
 **Request Body**:
 ```json
@@ -1215,6 +1255,16 @@ Content-Type: application/json
 
 **Test Case**: Filter with Empty Keyword
 
+**Request URL**: `http://localhost:8081/api/v1.0/filter`
+
+**HTTP Method**: `POST`
+
+**Headers**:
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
+
 **Request Body**:
 ```json
 {
@@ -1233,6 +1283,16 @@ Content-Type: application/json
 ### 5.8 Edge Case: Extreme Dates
 
 **Test Case**: Filter with Very Old Start Date
+
+**Request URL**: `http://localhost:8081/api/v1.0/filter`
+
+**HTTP Method**: `POST`
+
+**Headers**:
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
 
 **Request Body**:
 ```json
@@ -1255,6 +1315,16 @@ Content-Type: application/json
 
 **Test Case**: Filter with Invalid Type
 
+**Request URL**: `http://localhost:8081/api/v1.0/filter`
+
+**HTTP Method**: `POST`
+
+**Headers**:
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
+
 **Request Body**:
 ```json
 {
@@ -1274,6 +1344,16 @@ Content-Type: application/json
 ### 5.10 Edge Case: Missing Type
 
 **Test Case**: Filter Without Type
+
+**Request URL**: `http://localhost:8081/api/v1.0/filter`
+
+**HTTP Method**: `POST`
+
+**Headers**:
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
 
 **Request Body**:
 ```json
@@ -1297,6 +1377,14 @@ Content-Type: application/json
 **Preconditions**: User has no incomes or expenses
 
 **Request URL**: `http://localhost:8081/api/v1.0/dashboard`
+
+**HTTP Method**: `GET`
+
+**Headers**:
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
 
 **Expected Status**: `200 OK`
 
@@ -1322,6 +1410,14 @@ Content-Type: application/json
 
 **Request URL**: `http://localhost:8081/api/v1.0/dashboard`
 
+**HTTP Method**: `GET`
+
+**Headers**:
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
+
 **Expected Status**: `200 OK`
 
 **Expected Response**:
@@ -1345,6 +1441,14 @@ Content-Type: application/json
 **Preconditions**: User has expenses but no incomes
 
 **Request URL**: `http://localhost:8081/api/v1.0/dashboard`
+
+**HTTP Method**: `GET`
+
+**Headers**:
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
 
 **Expected Status**: `200 OK`
 
@@ -1370,6 +1474,16 @@ Content-Type: application/json
 
 **Preconditions**: User has both incomes and expenses
 
+**Request URL**: `http://localhost:8081/api/v1.0/dashboard`
+
+**HTTP Method**: `GET`
+
+**Headers**:
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
+
 **Expected Status**: `200 OK`
 
 **Expected Behavior**:
@@ -1382,6 +1496,16 @@ Content-Type: application/json
 ### 6.5 Balance Calculation Correctness
 
 **Test Case**: Verify Balance Formula
+
+**Request URL**: `http://localhost:8081/api/v1.0/dashboard`
+
+**HTTP Method**: `GET`
+
+**Headers**:
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
 
 **Verification Steps**:
 1. Add up all incomes from `recent5Incomes` (if more exist, check database)
@@ -1398,6 +1522,16 @@ Content-Type: application/json
 **Test Case**: Verify Transaction Sort Order
 
 **Preconditions**: User has at least 6 transactions (mix of income and expense)
+
+**Request URL**: `http://localhost:8081/api/v1.0/dashboard`
+
+**HTTP Method**: `GET`
+
+**Headers**:
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
 
 **Expected Behavior**:
 - `recentTransactions` sorted by `date` descending
@@ -1623,6 +1757,8 @@ Content-Type: application/json
 
 **Request URL**: Any protected endpoint
 
+**HTTP Method**: `GET`
+
 **Headers**:
 ```
 Authorization: Bearer <EXPIRED_JWT>
@@ -1642,6 +1778,8 @@ Content-Type: application/json
 **Test Case**: Use Malformed JWT
 
 **Request URL**: `http://localhost:8081/api/v1.0/profile`
+
+**HTTP Method**: `GET`
 
 **Headers**:
 ```
@@ -1907,12 +2045,16 @@ Content-Type: application/json
 }
 ```
 
-**Expected Status**: `403 Forbidden`
+**Expected Status**: `401 Unauthorized`
 
 **Expected Response**:
 ```json
 {
-  "message": "Account is not active. Please activate your account first."
+  "timestamp": "2026-02-14T10:00:00.123456",
+  "status": 401,
+  "error": "Unauthorized",
+  "errorCode": "AUTHENTICATION_ERROR",
+  "message": "Account is not activated. Please check your email for the activation link and activate your account before logging in."
 }
 ```
 
@@ -1958,12 +2100,16 @@ Content-Type: application/json
 }
 ```
 
-**Expected Status**: `400 Bad Request`
+**Expected Status**: `401 Unauthorized`
 
 **Expected Response**:
 ```json
 {
-  "message": "Bad credentials"
+  "timestamp": "2026-02-14T10:00:00.123456",
+  "status": 401,
+  "error": "Unauthorized",
+  "errorCode": "AUTHENTICATION_ERROR",
+  "message": "Invalid password. Please check your password and try again."
 }
 ```
 
@@ -1990,16 +2136,20 @@ Content-Type: application/json
 }
 ```
 
-**Expected Status**: `400 Bad Request`
+**Expected Status**: `404 Not Found`
 
 **Expected Response**:
 ```json
 {
-  "message": "Bad credentials"
+  "timestamp": "2026-02-14T10:00:00.123456",
+  "status": 404,
+  "error": "Not Found",
+  "errorCode": "RESOURCE_NOT_FOUND",
+  "message": "No account found with email 'nonexistent@example.com'. Please register first."
 }
 ```
 
-**Note**: For security, same error as wrong password.
+**Note**: Unlike wrong password (401), non-existent email returns 404.
 
 ---
 
@@ -2304,36 +2454,45 @@ This sequence assumes a clean database and tests the complete user journey.
 |----------|----------|-----------------|------------------|
 | `/status`, `/health` | Any request | 200 OK | "Application is running" |
 | `/register` | Valid payload | 201 Created | User created, password null in response |
-| `/register` | Missing fields | 400 Bad Request | Validation error |
-| `/register` | Duplicate email | 409 Conflict (assumed) | Email already exists |
+| `/register` | Missing fields | 400 Bad Request | Validation error (VALIDATION_ERROR) |
+| `/register` | Duplicate email | 409 Conflict | Email already exists (DUPLICATE_RESOURCE) |
 | `/activate` | Valid token | 200 OK | "Profile activated successfully" |
 | `/activate` | Invalid/used token | 404 Not Found | "Activation token not found or already used" |
 | `/login` | Valid credentials, activated | 200 OK | JWT token returned |
-| `/login` | Not activated | 403 Forbidden | "Account is not active..." |
-| `/login` | Wrong password | 400 Bad Request | "Bad credentials" |
-| `/login` | Non-existent user | 400 Bad Request | "Bad credentials" |
+| `/login` | Not activated | 401 Unauthorized | AUTHENTICATION_ERROR |
+| `/login` | Wrong password | 401 Unauthorized | AUTHENTICATION_ERROR |
+| `/login` | Non-existent user | 404 Not Found | RESOURCE_NOT_FOUND |
 | `/profile` | Valid JWT | 200 OK | User profile returned |
-| `/profile` | Missing/invalid JWT | 403 Forbidden | Access denied |
+| `/profile` | Missing JWT | 401 Unauthorized | AUTH_TOKEN_MISSING |
+| `/profile` | Invalid/expired JWT | 401 Unauthorized | AUTH_TOKEN_INVALID/AUTH_TOKEN_EXPIRED |
 | `/categories` (POST) | Valid payload | 201 Created | Category created |
-| `/categories` (POST) | Missing JWT | 403 Forbidden | Access denied |
-| `/categories` (POST) | Invalid type | 400 Bad Request | Validation error |
+| `/categories` (POST) | Missing JWT | 401 Unauthorized | AUTH_TOKEN_MISSING |
+| `/categories` (POST) | Invalid type | 400 Bad Request | VALIDATION_ERROR |
+| `/categories` (POST) | Duplicate name | 409 Conflict | DUPLICATE_RESOURCE |
 | `/categories` (GET) | Valid JWT | 200 OK | Array of categories (or empty) |
 | `/categories/{type}` (GET) | Valid JWT, valid type | 200 OK | Filtered categories |
 | `/categories/{id}` (PUT) | Valid JWT, own category | 200 OK | Category updated |
-| `/categories/{id}` (PUT) | Invalid ID | 404 Not Found | Category not found |
-| `/categories/{id}` (PUT) | Another user's category | 403/404 | Access denied |
+| `/categories/{id}` (PUT) | Invalid ID | 404 Not Found | RESOURCE_NOT_FOUND |
+| `/categories/{id}` (PUT) | Another user's category | 404 Not Found | RESOURCE_NOT_FOUND |
 | `/expenses` (POST) | Valid payload | 201 Created | Expense created |
-| `/expenses` (POST) | Missing required fields | 400 Bad Request | Validation error |
-| `/expenses` (POST) | Invalid category | 404 Not Found | Category not found |
+| `/expenses` (POST) | Missing required fields | 400 Bad Request | VALIDATION_ERROR |
+| `/expenses` (POST) | Invalid category | 404 Not Found | RESOURCE_NOT_FOUND |
+| `/expenses` (POST) | Wrong category type | 400 Bad Request | VALIDATION_ERROR |
 | `/expenses` (GET) | Valid JWT | 200 OK | Current month expenses |
 | `/expenses/{id}` (DELETE) | Valid JWT, own expense | 204 No Content | Expense deleted |
-| `/expenses/{id}` (DELETE) | Invalid ID | 404 Not Found | Expense not found |
+| `/expenses/{id}` (DELETE) | Invalid ID | 404 Not Found | RESOURCE_NOT_FOUND |
 | `/incomes` (POST) | Valid payload | 201 Created | Income created |
+| `/incomes` (POST) | Missing required fields | 400 Bad Request | VALIDATION_ERROR |
+| `/incomes` (POST) | Invalid category | 404 Not Found | RESOURCE_NOT_FOUND |
+| `/incomes` (POST) | Wrong category type | 400 Bad Request | VALIDATION_ERROR |
 | `/incomes` (GET) | Valid JWT | 200 OK | Current month incomes |
 | `/incomes/{id}` (DELETE) | Valid JWT, own income | 204 No Content | Income deleted |
+| `/incomes/{id}` (DELETE) | Invalid ID | 404 Not Found | RESOURCE_NOT_FOUND |
 | `/dashboard` | Valid JWT | 200 OK | Dashboard data with calculations |
 | `/filter` (POST) | Valid payload | 200 OK | Filtered results |
-| `/filter` (POST) | Invalid type | 400 Bad Request | "Invalid type. Must be 'income' or 'expense'" |
+| `/filter` (POST) | Missing type | 400 Bad Request | VALIDATION_ERROR |
+| `/filter` (POST) | Invalid type | 400 Bad Request | VALIDATION_ERROR |
+| `/filter` (POST) | Invalid sortField | 400 Bad Request | VALIDATION_ERROR |
 | `/excel/download/income` | Valid JWT | 200 OK | Excel file download |
 | `/excel/download/expense` | Valid JWT | 200 OK | Excel file download |
 | `/email/income-excel` | Valid JWT | 200 OK | Email sent |
