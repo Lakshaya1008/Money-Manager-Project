@@ -32,22 +32,26 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
         String message;
+        String errorCode;
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null) {
-            message = "Authentication required. Please provide a valid JWT token in the Authorization header.";
+            message = "Authentication token is missing. Please provide a valid JWT token in the Authorization header.";
+            errorCode = "AUTH_TOKEN_MISSING";
         } else if (!authHeader.startsWith("Bearer ")) {
             message = "Invalid Authorization header format. Expected 'Bearer <token>'";
+            errorCode = "AUTH_TOKEN_INVALID";
         } else {
-            message = "Authentication failed: " + authException.getMessage();
+            message = "Invalid authentication token. Please login again to get a new token.";
+            errorCode = "AUTH_TOKEN_INVALID";
         }
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", LocalDateTime.now().toString());
         body.put("status", HttpStatus.UNAUTHORIZED.value());
         body.put("error", HttpStatus.UNAUTHORIZED.getReasonPhrase());
+        body.put("errorCode", errorCode);
         body.put("message", message);
-        body.put("path", request.getRequestURI());
 
         response.getWriter().write(objectMapper.writeValueAsString(body));
     }

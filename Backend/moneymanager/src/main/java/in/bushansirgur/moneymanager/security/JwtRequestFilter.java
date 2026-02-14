@@ -54,13 +54,13 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
                 // Check if token is empty or just whitespace
                 if (jwt.trim().isEmpty()) {
-                    sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "JWT token is empty");
+                    sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "JWT token is empty", "AUTH_TOKEN_MISSING");
                     return;
                 }
 
                 email = jwtUtil.extractUsername(jwt);
             } else if (authHeader != null && !authHeader.startsWith("Bearer ")) {
-                sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "Invalid Authorization header format. Expected 'Bearer <token>'");
+                sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "Invalid Authorization header format. Expected 'Bearer <token>'", "AUTH_TOKEN_INVALID");
                 return;
             }
 
@@ -73,7 +73,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 } else {
-                    sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "JWT token validation failed. Token may be expired or invalid.");
+                    sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "JWT token validation failed. Token may be expired or invalid.", "AUTH_TOKEN_INVALID");
                     return;
                 }
             }
@@ -81,17 +81,17 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } catch (ExpiredJwtException e) {
-            sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "JWT token has expired. Please login again to get a new token.");
+            sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "Authentication token has expired. Please login again to get a new token.", "AUTH_TOKEN_EXPIRED");
         } catch (MalformedJwtException e) {
-            sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "JWT token is malformed. Please provide a valid token.");
+            sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "JWT token is malformed. Please provide a valid token.", "AUTH_TOKEN_INVALID");
         } catch (SecurityException e) {
-            sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "JWT token signature is invalid. Token may have been tampered with.");
+            sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "JWT token signature is invalid. Token may have been tampered with.", "AUTH_TOKEN_INVALID");
         } catch (UnsupportedJwtException e) {
-            sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "JWT token format is not supported.");
+            sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "JWT token format is not supported.", "AUTH_TOKEN_INVALID");
         } catch (IllegalArgumentException e) {
-            sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "JWT token is invalid: " + e.getMessage());
+            sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "JWT token is invalid: " + e.getMessage(), "AUTH_TOKEN_INVALID");
         } catch (UsernameNotFoundException e) {
-            sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "User not found for the provided token. Account may have been deleted.");
+            sendErrorResponse(response, HttpStatus.UNAUTHORIZED, "User not found for the provided token. Account may have been deleted.", "AUTH_TOKEN_INVALID");
         }
     }
 
@@ -111,7 +111,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     /**
      * Send a JSON error response with proper formatting
      */
-    private void sendErrorResponse(HttpServletResponse response, HttpStatus status, String message) throws IOException {
+    private void sendErrorResponse(HttpServletResponse response, HttpStatus status, String message, String errorCode) throws IOException {
         response.setStatus(status.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
@@ -119,6 +119,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         body.put("timestamp", LocalDateTime.now().toString());
         body.put("status", status.value());
         body.put("error", status.getReasonPhrase());
+        body.put("errorCode", errorCode);
         body.put("message", message);
 
         response.getWriter().write(objectMapper.writeValueAsString(body));
