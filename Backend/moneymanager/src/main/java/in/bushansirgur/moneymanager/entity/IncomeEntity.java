@@ -9,7 +9,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -24,7 +23,7 @@ public class IncomeEntity {
     private Long id;
     private String name;
     private String icon;
-    private LocalDate date;
+    private LocalDateTime date;
     private BigDecimal amount;
 
     @Column(updatable = false)
@@ -44,7 +43,7 @@ public class IncomeEntity {
     @PrePersist
     public void prePersist() {
         if (this.date == null) {
-            this.date = LocalDate.now();
+            this.date = LocalDateTime.now();
         }
     }
 }

@@ -36,11 +36,13 @@ public class ExpenseService {
         if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new ValidationException("amount", "Amount must be greater than zero");
         }
-        if (dto.getDate() == null) {
-            throw new ValidationException("date", "Date is required");
-        }
         if (dto.getCategoryId() == null) {
             throw new ValidationException("categoryId", "Category ID is required. Please select a category for this expense.");
+        }
+
+        // Default to current date if not provided
+        if (dto.getDate() == null) {
+            dto.setDate(LocalDate.now());
         }
 
         CategoryEntity category = categoryRepository.findByIdAndProfileId(dto.getCategoryId(), profile.getId())
