@@ -24,7 +24,6 @@ export const useUser = () => {
                 }
 
             }catch (error) {
-                console.log("Failed to fetch the user info", error);
                 if (isMounted) {
                     clearUser();
                     navigate("/login");

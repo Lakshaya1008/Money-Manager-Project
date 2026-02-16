@@ -25,12 +25,10 @@ const Category = () => {
         try {
             const response = await axiosConfig.get(API_ENDPOINTS.GET_ALL_CATEGORIES);
             if (response.status === 200) {
-                console.log('categories',response.data);
                 setCategoryData(response.data);
             }
         }catch(error) {
-            console.error('Something went wrong. Please try again.', error);
-            toast.error(error.message);
+            toast.error(error.response?.data?.message || "Failed to load categories");
         } finally {
             setLoading(false);
         }
@@ -63,11 +61,10 @@ const Category = () => {
             if (response.status === 201) {
                 toast.success("Category added successfully");
                 setOpenAddCategoryModal(false);
-                fetchCategoryDetails();
+                await fetchCategoryDetails();
             }
         }catch (error) {
-            console.error('Error adding category:', error);
-            toast.error(error.response?.data?.message || "Failed to add category.");
+            toast.error(error.response?.data?.message || "Failed to add category");
         }
     }
 
@@ -94,10 +91,9 @@ const Category = () => {
             setOpenEditCategoryModal(false);
             setSelectedCategory(null);
             toast.success("Category updated successfully");
-            fetchCategoryDetails();
+            await fetchCategoryDetails();
         }catch(error) {
-            console.error('Error updating category:', error.response?.data?.message || error.message);
-            toast.error(error.response?.data?.message || "Failed to update category.");
+            toast.error(error.response?.data?.message || "Failed to update category");
         }
     }
 

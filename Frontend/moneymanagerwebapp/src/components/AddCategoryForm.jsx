@@ -1,87 +1,105 @@
-import {useEffect, useState} from "react";
-import Input from "./Input.jsx";
+import {useState, useEffect} from "react";
+import PropTypes from "prop-types";
 import EmojiPickerPopup from "./EmojiPickerPopup.jsx";
-import {LoaderCircle} from "lucide-react";
 
-const AddCategoryForm = ({onAddCategory, initialCategoryData, isEditing}) => {
-    const [category, setCategory] = useState({
-        name: "",
-        type: "INCOME", // Standardized to UPPERCASE per API contract
-        icon: ""
-    })
-    const [loading, setLoading] = useState(false);
+const AddCategoryForm = ({onAddCategory, initialCategoryData, isEditing = false}) => {
+    const [name, setName] = useState("");
+    const [type, setType] = useState("INCOME"); // ✅ UPPERCASE for API
+    const [icon, setIcon] = useState("");
 
     useEffect(() => {
-        if (isEditing && initialCategoryData) {
-            setCategory(initialCategoryData);
-        } else {
-            setCategory({name: "", type: "INCOME", icon: ""});
+        if (initialCategoryData) {
+            setName(initialCategoryData.name || "");
+            setType(initialCategoryData.type || "INCOME");
+            setIcon(initialCategoryData.icon || "");
         }
-    }, [isEditing, initialCategoryData]);
+    }, [initialCategoryData]);
 
-    // Category type options - UPPERCASE to match API contract
-    const categoryTypeOptions = [
-        {value: "INCOME", label: "Income"},
-        {value: "EXPENSE", label: "Expense"},
-    ]
+    const handleSubmit = (e) => {
+        e.preventDefault();
 
-    const handleChange = (key, value) => {
-        setCategory({...category, [key]: value})
-    }
+        const categoryData = {
+            name: name.trim(),
+            type, // Will be "INCOME" or "EXPENSE" in UPPERCASE
+            icon
+        };
 
-    const handleSubmit = async () => {
-        setLoading(true);
-        try {
-            await onAddCategory(category);
-        }finally {
-            setLoading(false);
+        // If editing, include the ID
+        if (isEditing && initialCategoryData?.id) {
+            categoryData.id = initialCategoryData.id;
         }
-    }
+
+        onAddCategory(categoryData);
+    };
+
     return (
-        <div className="p-4">
-
+        <form onSubmit={handleSubmit}>
+            {/* Icon Picker */}
             <EmojiPickerPopup
-                icon={category.icon}
-                onSelect={(selectedIcon) => handleChange("icon", selectedIcon)}
+                icon={icon}
+                onSelect={setIcon}
             />
 
-            <Input
-                value={category.name}
-                onChange={({target}) => handleChange("name", target.value)}
-                label="Category Name"
-                placeholder="e.g., Freelance, Salary, Groceries"
-                type="text"
-            />
+            {/* Category Name */}
+            <div className="mb-4">
+                <label htmlFor="categoryName" className="block text-sm font-medium text-gray-700 mb-2">
+                    Category Name *
+                </label>
+                <input
+                    type="text"
+                    id="categoryName"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g., Salary, Groceries"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    required
+                />
+            </div>
 
-            <Input
-                label="Category Type"
-                value={category.type}
-                onChange={({target}) => handleChange("type", target.value)}
-                isSelect={true}
-                options={categoryTypeOptions}
-            />
+            {/* Category Type - Only show if NOT editing (type is immutable) */}
+            {!isEditing && (
+                <div className="mb-6">
+                    <label htmlFor="categoryType" className="block text-sm font-medium text-gray-700 mb-2">
+                        Category Type *
+                    </label>
+                    <select
+                        id="categoryType"
+                        value={type}
+                        onChange={(e) => setType(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        required
+                    >
+                        <option value="INCOME">Income</option>
+                        <option value="EXPENSE">Expense</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                        Category type cannot be changed after creation
+                    </p>
+                </div>
+            )}
 
-            <div className="flex justify-end mt-6">
+            {/* Submit Button */}
+            <div className="flex justify-end gap-3 mt-6">
                 <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={loading}
-                    className="add-btn add-btn-fill">
-                    {loading ? (
-                        <>
-                            <LoaderCircle className="w-4 h-4 animate-spin"/>
-                            {isEditing ? "Updating..." : "Adding..."}
-                        </>
-                    ): (
-                        <>
-                            {isEditing ? "Update Category" : "Add Category"}
-                        </>
-                    )}
+                    type="submit"
+                    className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                    {isEditing ? "Update Category" : "Add Category"}
                 </button>
             </div>
-        </div>
+        </form>
+    );
+};
 
-    )
-}
+AddCategoryForm.propTypes = {
+    onAddCategory: PropTypes.func.isRequired,
+    initialCategoryData: PropTypes.shape({
+        id: PropTypes.number,
+        name: PropTypes.string,
+        type: PropTypes.string,
+        icon: PropTypes.string,
+    }),
+    isEditing: PropTypes.bool,
+};
 
 export default AddCategoryForm;

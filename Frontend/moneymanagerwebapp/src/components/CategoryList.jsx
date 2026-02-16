@@ -1,62 +1,100 @@
-import {Layers2, Pencil} from "lucide-react";
+import {Edit, Utensils} from "lucide-react";
+import PropTypes from "prop-types";
 
-const CategoryList = ({categories, onEditCategory}) => {
-    return (
-        <div className="card p-4">
-            <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-semibold">Category Sources</h4>
+const CategoryList = ({categories = [], onEditCategory}) => {
+    // Group categories by type
+    const incomeCategories = categories.filter(cat => cat.type === "INCOME");
+    const expenseCategories = categories.filter(cat => cat.type === "EXPENSE");
+
+    const CategoryCard = ({category}) => (
+        <div className="group relative flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+            <div className="flex items-center gap-3">
+                <div className="w-12 h-12 flex items-center justify-center text-2xl bg-white rounded-full">
+                    {category.icon || <Utensils className="text-gray-400" size={20} />}
+                </div>
+                <div>
+                    <h4 className="text-sm font-medium text-gray-800">{category.name}</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                        {category.type === "INCOME" ? "Income Category" : "Expense Category"}
+                    </p>
+                </div>
             </div>
 
-            {/* Category list */}
-            {categories.length === 0 ? (
-                <p className="text-gray-500">
-                    No categories added yet. Add some to get started!
-                </p>
-            ): (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {categories.map((category) => (
-                        <div
-                            key={category.id}
-                            className="group relative flex items-center gap-4 p-3 rounded-lg hover:bg-gray-100/60">
-                            {/* Icon/Emoji disply*/}
-                            <div className="w-12 h-12 flex items-center justify-center text-xl text-gray-800 bg-gray-100 rounded-full">
-                                {category.icon ? (
-                                    <span className="text-2xl">
-                                        <img src={category.icon} alt={category.name} className="h-5 w-5" />
-                                    </span>
-                                ): (
-                                    <Layers2 className="text-purple-800" size={24} />
-                                )}
-                            </div>
+            <button
+                onClick={() => onEditCategory(category)}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-purple-100 rounded-lg"
+                title="Edit category"
+            >
+                <Edit size={18} className="text-purple-600" />
+            </button>
+        </div>
+    );
 
+    CategoryCard.propTypes = {
+        category: PropTypes.shape({
+            id: PropTypes.number.isRequired,
+            name: PropTypes.string.isRequired,
+            type: PropTypes.string.isRequired,
+            icon: PropTypes.string,
+        }).isRequired,
+    };
 
-                            {/* Category Details*/}
-                            <div className="flex-1 flex items-center justify-between">
-                                {/* Category name and type*/}
-                                <div>
-                                    <p className="text-sm text-gray-700 font-medium">
-                                        {category.name}
-                                    </p>
-                                    <p className="text-sm text-gray-400 mt-1 capitalize">
-                                        {category.type}
-                                    </p>
-                                </div>
-                                {/* Action buttons*/}
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => onEditCategory(category)}
-                                        className="text-gray-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                                        <Pencil size={18} />
-                                    </button>
-                                </div>
-                            </div>
+    return (
+        <div className="space-y-6">
+            {/* Income Categories */}
+            {incomeCategories.length > 0 && (
+                <div className="card">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <span className="text-green-600">💰</span>
+                        Income Categories ({incomeCategories.length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {incomeCategories.map((category) => (
+                            <CategoryCard key={category.id} category={category} />
+                        ))}
+                    </div>
+                </div>
+            )}
 
-                        </div>
-                    ))}
+            {/* Expense Categories */}
+            {expenseCategories.length > 0 && (
+                <div className="card">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <span className="text-red-600">💸</span>
+                        Expense Categories ({expenseCategories.length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {expenseCategories.map((category) => (
+                            <CategoryCard key={category.id} category={category} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Empty State */}
+            {categories.length === 0 && (
+                <div className="card text-center py-12">
+                    <div className="text-6xl mb-4">📋</div>
+                    <h3 className="text-lg font-medium text-gray-700 mb-2">No Categories Yet</h3>
+                    <p className="text-sm text-gray-500">
+                        Click &quot;Add Category&quot; to create your first category
+                    </p>
                 </div>
             )}
         </div>
     );
-}
+};
+
+CategoryList.propTypes = {
+    categories: PropTypes.arrayOf(
+        PropTypes.shape({
+            id: PropTypes.number.isRequired,
+            name: PropTypes.string.isRequired,
+            type: PropTypes.string.isRequired,
+            icon: PropTypes.string,
+        })
+    ),
+    onEditCategory: PropTypes.func.isRequired,
+};
 
 export default CategoryList;

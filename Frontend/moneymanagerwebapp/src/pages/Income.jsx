@@ -5,9 +5,7 @@ import axiosConfig from "../util/axiosConfig.jsx";
 import {API_ENDPOINTS} from "../util/apiEndpoints.js";
 import toast from "react-hot-toast";
 import IncomeList from "../components/IncomeList.jsx";
-import log from "eslint-plugin-react/lib/util/log.js";
 import Modal from "../components/Modal.jsx";
-import {Plus} from "lucide-react";
 import AddIncomeForm from "../components/AddIncomeForm.jsx";
 import DeleteAlert from "../components/DeleteAlert.jsx";
 import IncomeOverview from "../components/IncomeOverview.jsx";
@@ -33,10 +31,9 @@ const Income = () => {
         try {
             const response = await axiosConfig.get(API_ENDPOINTS.GET_ALL_INCOMES);
             if (response.status === 200) {
-               setIncomeData(response.data);
+                setIncomeData(response.data);
             }
         }catch(error) {
-            console.error('Failed to fetch income details:', error);
             toast.error(error.response?.data?.message || "Failed to fetch income details");
         }finally {
             setLoading(false);
@@ -48,12 +45,10 @@ const Income = () => {
         try {
             const response = await axiosConfig.get(API_ENDPOINTS.CATEGORY_BY_TYPE("income"));
             if (response.status === 200) {
-                console.log('income categories', response.data);
                 setCategories(response.data);
             }
         }catch(error) {
-            console.log('Failed to fetch income categories:', error);
-            toast.error(error.data?.message || "Failed to fetch income categories");
+            toast.error(error.response?.data?.message || "Failed to fetch income categories");
         }
     }
 
@@ -99,12 +94,10 @@ const Income = () => {
             if (response.status === 201) {
                 setOpenAddIncomeModal(false);
                 toast.success("Income added successfully");
-                fetchIncomeDetails();
-                fetchIncomeCategories();
+                await fetchIncomeDetails();
             }
         }catch(error){
-            console.log('Error adding income', error);
-            toast.error(error.response?.data?.message || "Failed to adding income");
+            toast.error(error.response?.data?.message || "Failed to add income");
         }
     }
 
@@ -114,9 +107,8 @@ const Income = () => {
             await axiosConfig.delete(API_ENDPOINTS.DELETE_INCOME(id));
             setOpenDeleteAlert({show: false, data: null});
             toast.success("Income deleted successfully");
-            fetchIncomeDetails();
+            await fetchIncomeDetails();
         }catch(error) {
-            console.log('Error deleting income', error);
             toast.error(error.response?.data?.message || "Failed to delete income");
         }
     }
@@ -124,7 +116,7 @@ const Income = () => {
     const handleDownloadIncomeDetails = async() => {
         try {
             const response = await axiosConfig.get(API_ENDPOINTS.INCOME_EXCEL_DOWNLOAD, {responseType: "blob"});
-            let filename = "income_details.xlsx";
+            const filename = "income_details.xlsx";
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement("a");
             link.href = url;
@@ -133,10 +125,9 @@ const Income = () => {
             link.click();
             link.parentNode.removeChild(link);
             window.URL.revokeObjectURL(url);
-            toast.success("Download income details successfully");
+            toast.success("Income details downloaded successfully");
         }catch(error) {
-            console.error('Error downloading income details:', error);
-            toast.error(error.response?.data?.message || "Failed to download income");
+            toast.error(error.response?.data?.message || "Failed to download income details");
         }
     }
 
@@ -147,15 +138,14 @@ const Income = () => {
                 toast.success("Income details emailed successfully");
             }
         }catch(error) {
-            console.error('Error emailing income details:', error);
-            toast.error(error.response?.data?.message || "Failed to email income");
+            toast.error(error.response?.data?.message || "Failed to email income details");
         }
     }
 
     useEffect(() => {
         fetchIncomeDetails();
-        fetchIncomeCategories()
-    }, []);
+        fetchIncomeCategories();
+    }, []); // Empty dependency array is correct - only run on mount
 
     return (
         <Dashboard activeMenu="Income">

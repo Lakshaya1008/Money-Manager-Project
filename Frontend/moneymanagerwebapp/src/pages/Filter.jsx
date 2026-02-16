@@ -31,11 +31,9 @@ const Filter = () => {
                 sortField,
                 sortOrder
             });
-            console.log('transactions: ', response.data);
             setTransactions(response.data);
         }catch (error) {
-            console.error('Failed to fetch transactions: ', error);
-            toast.error(error.message || "Failed to fetch transactions. Please try again.");
+            toast.error(error.response?.data?.message || "Failed to fetch transactions");
         }finally {
             setLoading(false);
         }

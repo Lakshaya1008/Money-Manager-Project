@@ -49,11 +49,10 @@ const Login = () => {
                 navigate("/dashboard");
             }
         }catch(error) {
-            if (error.response && error.response.data.message) {
+            if (error.response?.data?.message) {
                 setError(error.response.data.message);
             } else {
-                console.error('Something went wrong', error);
-                setError(error.message);
+                setError("Login failed. Please try again.");
             }
         } finally {
             setIsLoading(false);
@@ -108,15 +107,18 @@ const Login = () => {
                                         <LoaderCircle className="animate-spin w-5 h-5" />
                                         Logging in...
                                     </>
-                                ):("LOGIN")}
+                                ): (
+                                    "LOGIN"
+                                )}
                             </button>
 
                             <p className="text-sm text-slate-800 text-center mt-6">
                                 Don't have an account?
-                                <Link to="/signup" className="font-medium text-primary underline hover:text-primary-dark transition-colors">Signup</Link>
+                                <Link to="/signup" className="font-medium text-primary underline hover:text-primary-dark transition-colors">Create an Account</Link>
                             </p>
                         </form>
                     </div>
+
                 </div>
             </div>
         </div>

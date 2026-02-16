@@ -1,5 +1,12 @@
-export const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8081/api/v1.0";
-const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ?? "dhadf5h7j";
+const missingEnv = (name) => { throw new Error(`Missing required environment variable: ${name}`); };
+
+export const BASE_URL = (typeof import.meta.env.VITE_API_BASE_URL === 'string' && import.meta.env.VITE_API_BASE_URL !== '')
+    ? import.meta.env.VITE_API_BASE_URL
+    : missingEnv('VITE_API_BASE_URL');
+
+const CLOUDINARY_CLOUD_NAME = (typeof import.meta.env.VITE_CLOUDINARY_CLOUD_NAME === 'string' && import.meta.env.VITE_CLOUDINARY_CLOUD_NAME !== '')
+    ? import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+    : missingEnv('VITE_CLOUDINARY_CLOUD_NAME');
 
 export const API_ENDPOINTS = {
     LOGIN: "/login",

@@ -30,8 +30,7 @@ const Home = () => {
                 setDashboardData(response.data);
             }
         }catch (error) {
-            console.error('Something went wrong while fetching dashboard data:', error);
-            toast.error('Something went wrong!');
+            toast.error('Failed to load dashboard data');
         } finally {
             setLoading(false);
         }

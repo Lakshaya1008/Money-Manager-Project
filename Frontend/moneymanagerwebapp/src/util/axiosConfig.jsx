@@ -47,11 +47,8 @@ axiosConfig.interceptors.response.use((response) => {
                 window.location.href = "/login";
             }
             // AUTHENTICATION_ERROR (wrong password, not activated) - let component handle it
-        } else if (status === 500) {
-            console.error("Server error. Please try again later");
         }
-    } else if(error.code === "ECONNABORTED") {
-        console.error("Request timeout. Please try again.");
+        // Removed console.error - errors are handled by components
     }
     return Promise.reject(error);
 })

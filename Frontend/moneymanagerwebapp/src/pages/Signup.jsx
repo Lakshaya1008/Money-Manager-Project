@@ -62,12 +62,11 @@ const Signup = () => {
                 profileImageUrl
             })
             if (response.status === 201) {
-                toast.success("Profile created successfully.");
+                toast.success("Account created successfully");
                 navigate("/login");
             }
         } catch(err) {
-            console.error('Something went wrong', err);
-            setError(err.message);
+            setError(err.response?.data?.message || "Failed to create account");
         } finally {
             setIsLoading(false);
         }

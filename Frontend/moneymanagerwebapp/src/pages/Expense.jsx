@@ -38,8 +38,7 @@ const Expense = () => {
                 setExpenseData(response.data);
             }
         } catch (error) {
-            console.error("Failed to fetch expense details:", error);
-            toast.error("Failed to fetch expense details.");
+            toast.error(error.response?.data?.message || "Failed to fetch expense details");
         } finally {
             setLoading(false);
         }
@@ -55,8 +54,7 @@ const Expense = () => {
                 setCategories(response.data);
             }
         } catch (error) {
-            console.error("Failed to fetch expense categories:", error);
-            toast.error("Failed to fetch expense categories.");
+            toast.error(error.response?.data?.message || "Failed to fetch expense categories");
         }
     };
 
@@ -103,14 +101,9 @@ const Expense = () => {
 
             setOpenAddExpenseModal(false);
             toast.success("Expense added successfully");
-            fetchExpenseDetails(); // Refresh expense list
-            fetchExpenseCategories();
+            await fetchExpenseDetails(); // Refresh expense list
         } catch (error) {
-            console.error(
-                "Error adding expense:",
-                error.response?.data?.message || error.message
-            );
-            toast.error(error.response?.data?.message || "Failed to add expense.");
+            toast.error(error.response?.data?.message || "Failed to add expense");
         }
     };
 
@@ -120,28 +113,24 @@ const Expense = () => {
             await axiosConfig.delete(API_ENDPOINTS.DELETE_EXPENSE(id));
 
             setOpenDeleteAlert({ show: false, data: null });
-            toast.success("Expense details deleted successfully");
-            fetchExpenseDetails();
+            toast.success("Expense deleted successfully");
+            await fetchExpenseDetails();
         } catch (error) {
-            console.error(
-                "Error deleting expense:",
-                error.response?.data?.message || error.message
-            );
-            toast.error(error.response?.data?.message || "Failed to delete expense.");
+            toast.error(error.response?.data?.message || "Failed to delete expense");
         }
     };
 
     const handleDownloadExpenseDetails = async () => {
         try {
             const response = await axiosConfig.get(
-                API_ENDPOINTS.EXPENSE_EXCEL_DOWNLOAD, // Ensure this path is correct, e.g., "/download/income"
+                API_ENDPOINTS.EXPENSE_EXCEL_DOWNLOAD,
                 {
                     responseType: "blob", // Important: tells Axios to expect binary data
                 }
             );
 
             // Extract filename from Content-Disposition header, or use a default
-            let filename = "expense_details.xlsx"; // Default filename
+            const filename = "expense_details.xlsx"; // Default filename
 
             // Create a URL for the blob
             const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -153,10 +142,9 @@ const Expense = () => {
             link.parentNode.removeChild(link); // Clean up the link element
             window.URL.revokeObjectURL(url); // Release the object URL
 
-            toast.success("Expense details downloaded successfully!");
+            toast.success("Expense details downloaded successfully");
         } catch (error) {
-            console.error("Error downloading expense details:", error);
-            toast.error("Failed to download expense details. Please try again.");
+            toast.error(error.response?.data?.message || "Failed to download expense details");
         }
     };
 
@@ -164,11 +152,10 @@ const Expense = () => {
         try {
             const response = await axiosConfig.get(API_ENDPOINTS.EMAIL_EXPENSE);
             if(response.status === 200) {
-                toast.success("Email sent");
+                toast.success("Email sent successfully");
             }
         }catch (e) {
-            console.error("Error emailing expense details:", e);
-            toast.error("Failed to email expense details. Please try again.");
+            toast.error(e.response?.data?.message || "Failed to email expense details");
         }
     }
 
