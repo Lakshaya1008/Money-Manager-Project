@@ -22,8 +22,8 @@ const Sidebar = ({activeMenu}) => {
                     onClick={() => navigate(item.path)}
                     key={`menu_${index}`}
                     className={`cursor-pointer w-full flex items-center gap-4 text-[15px] py-3 px-6 rounded-lg mb-3 ${activeMenu == item.label ? "text-white bg-purple-800": ""}`}>
-                      <item.icon className="text-xl" />
-                        {item.label}
+                    <item.icon className="text-xl" />
+                    {item.label}
                 </button>
             ))}
         </div>

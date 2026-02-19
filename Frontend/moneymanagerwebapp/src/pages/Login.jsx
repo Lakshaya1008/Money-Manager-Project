@@ -1,128 +1,131 @@
-import {useContext, useState} from "react";
-import {Link, useNavigate} from "react-router-dom";
-import {assets} from "../assets/assets.js";
-import Input from "../components/Input.jsx";
-import {validateEmail} from "../util/validation.js";
+import { useState, useContext } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { AppContext } from "../context/AppContext.jsx";
 import axiosConfig from "../util/axiosConfig.jsx";
-import {API_ENDPOINTS} from "../util/apiEndpoints.js";
-import {AppContext} from "../context/AppContext.jsx";
-import {LoaderCircle} from "lucide-react";
-import Header from "../components/Header.jsx";
+import { API_ENDPOINTS } from "../util/apiEndpoints.js";
+import toast from "react-hot-toast";
+import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 
 const Login = () => {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [error, setError] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const {setUser} = useContext(AppContext);
-
+    const { login } = useContext(AppContext);
     const navigate = useNavigate();
+
+    const [form, setForm] = useState({ email: "", password: "" });
+    const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const handleChange = (e) => {
+        setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
+    const validate = () => {
+        if (!form.email.trim()) { toast.error("Email is required"); return false; }
+        if (!form.password) { toast.error("Password is required"); return false; }
+        return true;
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setIsLoading(true);
-        //basic validation
-        if (!validateEmail(email)) {
-            setError("Please enter valid email address");
-            setIsLoading(false);
-            return;
-        }
+        if (!validate() || loading) return;
 
-        if (!password.trim()) {
-            setError("Please enter your password");
-            setIsLoading(false);
-            return;
-        }
-
-        setError("");
-
-        //LOGIN API call
+        setLoading(true);
         try {
             const response = await axiosConfig.post(API_ENDPOINTS.LOGIN, {
-                email,
-                password,
+                // FIX: normalize email to lowercase before sending
+                // Prevents "Lakshayajain93@gmail.com" vs "lakshayajain93@gmail.com" mismatch
+                email: form.email.toLowerCase().trim(),
+                password: form.password,
             });
-            const {token, user} = response.data;
-            if (token) {
-                localStorage.setItem("token", token);
-                setUser(user);
-                navigate("/dashboard");
-            }
-        }catch(error) {
-            if (error.response?.data?.message) {
-                setError(error.response.data.message);
-            } else {
-                setError("Login failed. Please try again.");
-            }
-        } finally {
-            setIsLoading(false);
-        }
 
-    }
+            const { token, user } = response.data;
+            login(user, token);
+            toast.success(`Welcome back, ${user.fullName || "User"}!`);
+            navigate("/dashboard");
+
+        } catch (error) {
+            const message = error.response?.data?.message || "Login failed. Please try again.";
+            toast.error(message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
-        <div className="h-screen w-full flex flex-col">
-            <Header />
-            <div className="flex-grow w-full relative flex items-center justify-center overflow-hidden">
-                {/* Background image with blur*/}
-                <img src={assets.login_bg} alt="Background" className="absolute inset-0 w-full h-full object-cover filter blur-sm" />
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50 px-4">
+            <div className="bg-white rounded-2xl shadow-md w-full max-w-md p-8">
 
-                <div className="relative z-10 w-full max-w-md px-6">
+                {/* Header */}
+                <div className="text-center mb-8">
+                    <div className="text-4xl mb-3">💰</div>
+                    <h1 className="text-2xl font-bold text-gray-800">Welcome back</h1>
+                    <p className="text-sm text-gray-400 mt-1">Sign in to your account</p>
+                </div>
 
-                    <div className="bg-white bg-opacity-95 backdrop-blur-sm rounded-lg shadow-2xl p-8">
-                        <h3 className="text-2xl font-semibold text-black text-center mb-2">
-                            Welcome Back
-                        </h3>
-                        <p className="text-sm text-slate-700 text-center mb-8">
-                            Please enter your details to login in
-                        </p>
+                <form onSubmit={handleSubmit} className="space-y-5">
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
-
-                            <Input
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                label="Email Address"
-                                placeholder="name@example.com"
-                                type="text"
-                            />
-
-                            <Input
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                label="Password"
-                                placeholder="*********"
-                                type="password"
-                            />
-
-                            {error && (
-                                <p className="text-red-800 text-sm text-center bg-red-50 p-2 rounded">
-                                    {error}
-                                </p>
-                            )}
-
-                            <button disabled={isLoading} className={`btn-primary w-full py-3 text-lg font-medium flex items-center justify-center gap-2 ${isLoading ? 'opacity-60 cursor-not-allowed': ''}`} type="submit">
-                                {isLoading ? (
-                                    <>
-                                        <LoaderCircle className="animate-spin w-5 h-5" />
-                                        Logging in...
-                                    </>
-                                ): (
-                                    "LOGIN"
-                                )}
-                            </button>
-
-                            <p className="text-sm text-slate-800 text-center mt-6">
-                                Don't have an account?
-                                <Link to="/signup" className="font-medium text-primary underline hover:text-primary-dark transition-colors">Create an Account</Link>
-                            </p>
-                        </form>
+                    {/* Email */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Email
+                        </label>
+                        <input
+                            type="email"
+                            name="email"
+                            value={form.email}
+                            onChange={handleChange}
+                            placeholder="you@example.com"
+                            className="input"
+                            autoComplete="email"
+                        />
                     </div>
 
-                </div>
+                    {/* Password */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Password
+                        </label>
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                name="password"
+                                value={form.password}
+                                onChange={handleChange}
+                                placeholder="Enter your password"
+                                className="input pr-10"
+                                autoComplete="current-password"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword((v) => !v)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                tabIndex={-1}
+                            >
+                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Submit */}
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="add-btn w-full flex items-center justify-center gap-2"
+                    >
+                        {loading && <LoaderCircle size={16} className="animate-spin" />}
+                        {loading ? "Signing in…" : "Sign In"}
+                    </button>
+                </form>
+
+                {/* Footer */}
+                <p className="text-center text-sm text-gray-500 mt-6">
+                    Don&apos;t have an account?{" "}
+                    <Link to="/signup" className="text-purple-600 font-medium hover:underline">
+                        Sign up
+                    </Link>
+                </p>
             </div>
         </div>
-    )
-}
+    );
+};
 
 export default Login;

@@ -9,9 +9,22 @@ const CategoryList = ({categories = [], onEditCategory}) => {
     const CategoryCard = ({category}) => (
         <div className="group relative flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
             <div className="flex items-center gap-3">
-                <div className="w-12 h-12 flex items-center justify-center text-2xl bg-white rounded-full">
-                    {category.icon || <Utensils className="text-gray-400" size={20} />}
+                <div className="w-12 h-12 flex items-center justify-center text-2xl bg-white rounded-full overflow-hidden">
+                    {category.icon ? (
+                        category.icon.startsWith("http") ? (
+                            <img
+                                src={category.icon}
+                                alt="category icon"
+                                className="w-7 h-7 object-contain"
+                            />
+                        ) : (
+                            <span>{category.icon}</span>
+                        )
+                    ) : (
+                        <Utensils className="text-gray-400" size={20} />
+                    )}
                 </div>
+
                 <div>
                     <h4 className="text-sm font-medium text-gray-800">{category.name}</h4>
                     <p className="text-xs text-gray-500 mt-0.5">
