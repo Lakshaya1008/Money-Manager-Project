@@ -1,56 +1,49 @@
 import axios from "axios";
-import {BASE_URL} from "./apiEndpoints.js";
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api/v1.0";
 
 const axiosConfig = axios.create({
     baseURL: BASE_URL,
+    timeout: 30000,
     headers: {
         "Content-Type": "application/json",
-        Accept: "application/json"
-    }
+    },
 });
 
-//list of endpoints that do not required authorization header
-const excludeEndpoints = ["/login", "/register", "/status", "/activate", "/health"];
-
-//request interceptor
-axiosConfig.interceptors.request.use((config) => {
-    const shouldSkipToken = excludeEndpoints.some((endpoint) => {
-        return config.url?.includes(endpoint)
-    });
-
-    if (!shouldSkipToken) {
-        const accessToken = localStorage.getItem("token");
-        if (accessToken) {
-            config.headers.Authorization = `Bearer ${accessToken}`;
+// ─── Request interceptor — attach JWT ───────────────────────────────────────
+axiosConfig.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem("token");
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
         }
-    }
-    return config;
-}, (error) => {
-    return Promise.reject(error);
-});
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
 
-//response interceptor - Enhanced per API contract error codes
-axiosConfig.interceptors.response.use((response) => {
-    return response;
-}, (error) => {
-    if(error.response) {
-        const { status, data } = error.response;
-        const errorCode = data?.errorCode;
+// ─── Response interceptor — handle auth errors ──────────────────────────────
+axiosConfig.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        const errorCode = error.response?.data?.errorCode;
 
-        // Handle token-related 401 errors (redirect to login)
-        // But NOT login/authentication errors which should show error to user
-        if (status === 401) {
-            const tokenErrors = ['AUTH_TOKEN_MISSING', 'AUTH_TOKEN_INVALID', 'AUTH_TOKEN_EXPIRED'];
-            if (tokenErrors.includes(errorCode)) {
-                // Token issues - clear storage and redirect
-                localStorage.removeItem('token');
+        // Any auth token error → clear storage and redirect to login
+        if (
+            errorCode === "AUTH_TOKEN_MISSING" ||
+            errorCode === "AUTH_TOKEN_INVALID" ||
+            errorCode === "AUTH_TOKEN_EXPIRED"
+        ) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            // Redirect to login (avoid import cycle with navigate)
+            if (window.location.pathname !== "/login") {
                 window.location.href = "/login";
             }
-            // AUTHENTICATION_ERROR (wrong password, not activated) - let component handle it
         }
-        // Removed console.error - errors are handled by components
+
+        return Promise.reject(error);
     }
-    return Promise.reject(error);
-})
+);
 
 export default axiosConfig;
