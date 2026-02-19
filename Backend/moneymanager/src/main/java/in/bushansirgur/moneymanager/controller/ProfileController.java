@@ -21,35 +21,39 @@ public class ProfileController {
 
     @PostMapping("/register")
     public ResponseEntity<ProfileDTO> registerProfile(@RequestBody ProfileDTO profileDTO) {
-        ProfileDTO registeredProfile = profileService.registerProfile(profileDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(registeredProfile);
+        ProfileDTO registered = profileService.registerProfile(profileDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(registered);
     }
 
     @GetMapping("/activate")
     public ResponseEntity<Map<String, Object>> activateProfile(@RequestParam String token) {
-        boolean isActivated = profileService.activateProfile(token);
+        boolean activated = profileService.activateProfile(token);
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("timestamp", LocalDateTime.now().toString());
-
-        if (isActivated) {
+        if (activated) {
             response.put("status", HttpStatus.OK.value());
-            response.put("message", "Profile activated successfully. You can now login to your account.");
+            response.put("message", "Account activated successfully. You can now login.");
             return ResponseEntity.ok(response);
-        } else {
-            throw new ResourceNotFoundException("Activation token not found or already used. Please request a new activation email.");
         }
+        throw new ResourceNotFoundException(
+                "Activation token not found or already used. Please request a new activation email.");
     }
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody AuthDTO authDTO) {
-        // All validation is now handled in ProfileService.authenticateAndGenerateToken()
         Map<String, Object> response = profileService.authenticateAndGenerateToken(authDTO);
         return ResponseEntity.ok(response);
     }
 
+    /** GET /profile — current authenticated user */
     @GetMapping("/profile")
-    public ResponseEntity<ProfileDTO> getPublicProfile() {
-        ProfileDTO profileDTO = profileService.getPublicProfile(null);
-        return ResponseEntity.ok(profileDTO);
+    public ResponseEntity<ProfileDTO> getProfile() {
+        return ResponseEntity.ok(profileService.getPublicProfile(null));
+    }
+
+    /** PUT /profile — update name + avatar */
+    @PutMapping("/profile")
+    public ResponseEntity<ProfileDTO> updateProfile(@RequestBody ProfileDTO profileDTO) {
+        return ResponseEntity.ok(profileService.updateProfile(profileDTO));
     }
 }

@@ -396,7 +396,7 @@ curl -X POST http://localhost:8081/api/v1.0/filter \
 ```
 </details>
 
-> 📖 **Full API Documentation:** See [API_CONTRACT.md](API_CONTRACT.md) for complete request/response examples.
+> 📖 **Full API Documentation:** See [API_CONTRACT.md](postman/API_CONTRACT.md) for complete request/response examples.
 
 ---
 
