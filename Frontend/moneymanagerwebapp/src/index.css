@@ -11,6 +11,15 @@ body {
   @apply w-full flex justify-between gap-3 text-sm text-gray-800 bg-gray-50 rounded px-4 py-3 mb-4 mt-3 border border-gray-200 outline-none;
 }
 
+/* FIX: .input class was missing — Login.jsx uses className="input" and className="input pr-10"
+   Without this, the login form inputs have zero styling (no border, no padding, no width). */
+.input {
+  @apply w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-800
+  bg-white outline-none
+  focus:ring-2 focus:ring-purple-400 focus:border-transparent
+  placeholder:text-gray-400;
+}
+
 .btn-primary {
   @apply w-full text-sm font-medium text-white bg-purple-900 shadow-lg shadow-purple-800/20 p-[10px] rounded-md my-1 hover:bg-purple-700 hover:shadow-purple-900/30;
 }

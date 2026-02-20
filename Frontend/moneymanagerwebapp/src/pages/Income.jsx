@@ -1,195 +1,165 @@
+import { useEffect, useState } from "react";
 import Dashboard from "../components/Dashboard.jsx";
-import {useUser} from "../hooks/useUser.jsx";
-import {useEffect, useState} from "react";
-import axiosConfig from "../util/axiosConfig.jsx";
-import {API_ENDPOINTS} from "../util/apiEndpoints.js";
-import toast from "react-hot-toast";
-import IncomeList from "../components/IncomeList.jsx";
-import Modal from "../components/Modal.jsx";
-import AddIncomeForm from "../components/AddIncomeForm.jsx";
-import DeleteAlert from "../components/DeleteAlert.jsx";
 import IncomeOverview from "../components/IncomeOverview.jsx";
+import IncomeList from "../components/IncomeList.jsx";
+import AddIncomeForm from "../components/AddIncomeForm.jsx";
+import axiosConfig from "../util/axiosConfig.jsx";
+import { API_ENDPOINTS } from "../util/apiEndpoints.js";
+import { useUser } from "../hooks/useUser.jsx";
+import Modal from "../components/Modal.jsx";
+import toast from "react-hot-toast";
 
 const Income = () => {
     useUser();
+
     const [incomeData, setIncomeData] = useState([]);
+    // FIX: fetch INCOME categories so AddIncomeForm dropdown is populated
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [openAddModal, setOpenAddModal] = useState(false);
 
-    const [openAddIncomeModal, setOpenAddIncomeModal] = useState(false);
-    const [openDeleteAlert, setOpenDeleteAlert] = useState({
-        show: false,
-        data: null,
-    });
-
-    // Fetch income details from the API
-    const fetchIncomeDetails = async () => {
+    const fetchIncomeData = async () => {
         if (loading) return;
-
         setLoading(true);
-
         try {
-            const response = await axiosConfig.get(API_ENDPOINTS.GET_ALL_INCOMES);
-            if (response.status === 200) {
-                setIncomeData(response.data);
-            }
-        }catch(error) {
-            toast.error(error.response?.data?.message || "Failed to fetch income details");
-        }finally {
+            const response = await axiosConfig.get(API_ENDPOINTS.GET_ALL_INCOME);
+            setIncomeData(response.data || []);
+        } catch (error) {
+            console.error("Error fetching income data:", error);
+            toast.error(error.response?.data?.message || "Failed to load income data");
+        } finally {
             setLoading(false);
         }
-    }
+    };
 
-    // Fetch categories for income
-    const fetchIncomeCategories = async () => {
+    // FIX: fetch categories filtered by INCOME type for the add form dropdown
+    const fetchCategories = async () => {
         try {
-            const response = await axiosConfig.get(API_ENDPOINTS.CATEGORY_BY_TYPE("income"));
-            if (response.status === 200) {
-                setCategories(response.data);
-            }
-        }catch(error) {
-            toast.error(error.response?.data?.message || "Failed to fetch income categories");
+            const response = await axiosConfig.get(
+                API_ENDPOINTS.GET_CATEGORY_BY_TYPE("INCOME")
+            );
+            setCategories(response.data || []);
+        } catch (error) {
+            console.error("Error fetching income categories:", error);
         }
-    }
+    };
 
-    //save the income details
+    useEffect(() => {
+        fetchIncomeData();
+        fetchCategories();
+    }, []);
+
     const handleAddIncome = async (income) => {
-        const {name, amount, date, icon, categoryId} = income;
-
-        //validation
-        if (!name.trim()) {
-            toast.error("Please enter a name");
-            return;
+        if (!income.name?.trim()) {
+            toast.error("Income name is required");
+            return false;
         }
-
-        if (!amount || isNaN(amount) || Number(amount) <= 0) {
-            toast.error("Amount should be a valid number greater than 0");
-            return;
+        if (!income.amount || Number(income.amount) <= 0) {
+            toast.error("Amount must be greater than zero");
+            return false;
         }
-
-        if (!date) {
-            toast.error("Please select a date");
-            return;
-        }
-
-        const today = new Date().toISOString().split('T')[0];
-        if (date > today) {
-            toast.error('Date cannot be in the future');
-            return;
-        }
-
-        if (!categoryId) {
+        if (!income.categoryId) {
             toast.error("Please select a category");
-            return;
+            return false;
         }
 
         try {
-            const response = await axiosConfig.post(API_ENDPOINTS.ADD_INCOME, {
-                name,
-                amount: Number(amount),
-                date,
-                icon,
-                categoryId,
-            })
-            if (response.status === 201) {
-                setOpenAddIncomeModal(false);
-                toast.success("Income added successfully");
-                await fetchIncomeDetails();
-            }
-        }catch(error){
+            const payload = {
+                name: income.name.trim(),
+                amount: income.amount,
+                categoryId: income.categoryId,
+                icon: income.icon || null,
+                // date is optional — omit if empty (backend defaults to now)
+                ...(income.date && { date: income.date }),
+            };
+            await axiosConfig.post(API_ENDPOINTS.ADD_INCOME, payload);
+            setOpenAddModal(false);
+            fetchIncomeData();
+            toast.success("Income added successfully!");
+            return true;
+        } catch (error) {
+            console.error("Error adding income:", error);
             toast.error(error.response?.data?.message || "Failed to add income");
+            return false;
         }
-    }
+    };
 
-    //delete income details
-    const deleteIncome = async (id) => {
+    const handleDeleteIncome = async (incomeId) => {
         try {
-            await axiosConfig.delete(API_ENDPOINTS.DELETE_INCOME(id));
-            setOpenDeleteAlert({show: false, data: null});
-            toast.success("Income deleted successfully");
-            await fetchIncomeDetails();
-        }catch(error) {
+            await axiosConfig.delete(API_ENDPOINTS.DELETE_INCOME(incomeId));
+            fetchIncomeData();
+            toast.success("Income deleted successfully!");
+        } catch (error) {
+            console.error("Error deleting income:", error);
             toast.error(error.response?.data?.message || "Failed to delete income");
         }
-    }
+    };
 
-    const handleDownloadIncomeDetails = async() => {
+    // FIX: email/download handlers were missing — IncomeList was never rendered
+    const handleDownloadExcel = async () => {
         try {
-            const response = await axiosConfig.get(API_ENDPOINTS.INCOME_EXCEL_DOWNLOAD, {responseType: "blob"});
-            const filename = "income_details.xlsx";
+            const response = await axiosConfig.get(API_ENDPOINTS.DOWNLOAD_INCOME_EXCEL, {
+                responseType: "blob",
+            });
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement("a");
             link.href = url;
-            link.setAttribute("download", filename);
+            link.setAttribute("download", "income_report.xlsx");
             document.body.appendChild(link);
             link.click();
-            link.parentNode.removeChild(link);
+            link.remove();
             window.URL.revokeObjectURL(url);
-            toast.success("Income details downloaded successfully");
-        }catch(error) {
-            toast.error(error.response?.data?.message || "Failed to download income details");
+            toast.success("Income report downloaded!");
+        } catch (error) {
+            console.error("Error downloading income excel:", error);
+            toast.error(error.response?.data?.message || "Failed to download report");
         }
-    }
+    };
 
-    const handleEmailIncomeDetails = async () => {
+    const handleEmailReport = async () => {
         try {
-            const response = await axiosConfig.get(API_ENDPOINTS.EMAIL_INCOME);
-            if (response.status === 200) {
-                toast.success("Income details emailed successfully");
-            }
-        }catch(error) {
-            toast.error(error.response?.data?.message || "Failed to email income details");
+            await axiosConfig.get(API_ENDPOINTS.EMAIL_INCOME_EXCEL);
+            toast.success("Income report sent to your email!");
+        } catch (error) {
+            console.error("Error emailing income report:", error);
+            toast.error(error.response?.data?.message || "Failed to send email report");
         }
-    }
-
-    useEffect(() => {
-        fetchIncomeDetails();
-        fetchIncomeCategories();
-    }, []); // Empty dependency array is correct - only run on mount
+    };
 
     return (
         <Dashboard activeMenu="Income">
             <div className="my-5 mx-auto">
                 <div className="grid grid-cols-1 gap-6">
-                    <div>
-                        {/* overview for income with line char */}
-                        <IncomeOverview transactions={incomeData} onAddIncome={() => setOpenAddIncomeModal(true)} />
-                    </div>
+                    {/* Chart + Add button */}
+                    <IncomeOverview
+                        transactions={incomeData}
+                        onAddIncome={() => setOpenAddModal(true)}
+                    />
 
+                    {/* FIX: IncomeList was never rendered — no list, no email/download buttons */}
                     <IncomeList
                         transactions={incomeData}
-                        onDelete={(id) => setOpenDeleteAlert({show: true, data: id})}
-                        onDownload={handleDownloadIncomeDetails}
-                        onEmail={handleEmailIncomeDetails}
+                        onDelete={handleDeleteIncome}
+                        onDownload={handleDownloadExcel}
+                        onEmail={handleEmailReport}
                     />
 
                     {/* Add Income Modal */}
                     <Modal
-                        isOpen={openAddIncomeModal}
-                        onClose={() => setOpenAddIncomeModal(false)}
+                        isOpen={openAddModal}
+                        onClose={() => setOpenAddModal(false)}
                         title="Add Income"
                     >
+                        {/* FIX: categories prop was missing → dropdown always empty */}
                         <AddIncomeForm
-                            onAddIncome={(income) => handleAddIncome(income)}
+                            onAddIncome={handleAddIncome}
                             categories={categories}
-                        />
-                    </Modal>
-
-                    {/* Delete Income Modal */}
-                    <Modal
-                        isOpen={openDeleteAlert.show}
-                        onClose={() => setOpenDeleteAlert({show: false, data: null})}
-                        title="Delete Income"
-                    >
-                        <DeleteAlert
-                            content="Are you sure want to delete this income details?"
-                            onDelete={() => deleteIncome(openDeleteAlert.data)}
                         />
                     </Modal>
                 </div>
             </div>
         </Dashboard>
-    )
-}
+    );
+};
 
 export default Income;

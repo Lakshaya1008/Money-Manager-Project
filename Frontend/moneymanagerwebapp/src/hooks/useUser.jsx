@@ -5,7 +5,10 @@ import axiosConfig from "../util/axiosConfig.jsx";
 import {API_ENDPOINTS} from "../util/apiEndpoints.js";
 
 export const useUser = () => {
-    const {user, setUser, clearUser} = useContext(AppContext);
+    // FIX: AppContext does NOT export setUser — it exports updateUser.
+    // Using setUser here causes "setUser is not a function" crash on every
+    // protected page (Dashboard, Income, Expense, Category, Filter, Profile).
+    const {user, updateUser, clearUser} = useContext(AppContext);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -20,7 +23,7 @@ export const useUser = () => {
                 const response = await axiosConfig.get(API_ENDPOINTS.GET_USER_INFO);
 
                 if (isMounted && response.data) {
-                    setUser(response.data);
+                    updateUser(response.data); // was setUser — which was undefined
                 }
 
             }catch (error) {
@@ -36,6 +39,6 @@ export const useUser = () => {
         return () => {
             isMounted = false;
         }
-    }, [user, setUser, clearUser, navigate]);
+    }, [user, updateUser, clearUser, navigate]);
 
 }

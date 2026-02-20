@@ -8,6 +8,7 @@ import {API_ENDPOINTS} from "../util/apiEndpoints.js";
 import toast from "react-hot-toast";
 import Modal from "../components/Modal.jsx";
 import AddCategoryForm from "../components/AddCategoryForm.jsx";
+import DeleteAlert from "../components/DeleteAlert.jsx";
 
 const Category = () => {
     useUser();
@@ -15,6 +16,10 @@ const Category = () => {
     const [categoryData, setCategoryData] = useState([]);
     const [openAddCategoryModal, setOpenAddCategoryModal] = useState(false);
     const [openEditCategoryModal, setOpenEditCategoryModal] = useState(false);
+    const [openDeleteAlert, setOpenDeleteAlert] = useState({
+        show: false,
+        data: null,
+    });
     const [selectedCategory, setSelectedCategory] = useState(null);
 
     const fetchCategoryDetails = async () => {
@@ -46,10 +51,9 @@ const Category = () => {
             return;
         }
 
-        //check if the category already exists
-        const isDuplicate = categoryData.some((category) => {
-            return category.name.toLowerCase() === name.trim().toLowerCase();
-        })
+        const isDuplicate = categoryData.some((cat) => {
+            return cat.name.toLowerCase() === name.trim().toLowerCase();
+        });
 
         if (isDuplicate) {
             toast.error("Category Name already exists");
@@ -74,7 +78,7 @@ const Category = () => {
     }
 
     const handleUpdateCategory = async (updatedCategory) => {
-        const {id, name, icon} = updatedCategory; // Removed 'type' - per API contract, type cannot be updated
+        const {id, name, icon} = updatedCategory;
         if (!name.trim()) {
             toast.error("Category Name is required");
             return;
@@ -86,7 +90,6 @@ const Category = () => {
         }
 
         try {
-            // Only send name and icon - type is immutable per API contract
             await axiosConfig.put(API_ENDPOINTS.UPDATE_CATEGORY(id), {name, icon});
             setOpenEditCategoryModal(false);
             setSelectedCategory(null);
@@ -97,10 +100,27 @@ const Category = () => {
         }
     }
 
+    const handleDeleteCategory = (categoryToDelete) => {
+        setSelectedCategory(categoryToDelete);
+        setOpenDeleteAlert({ show: true, data: categoryToDelete.id });
+    }
+
+    const deleteCategory = async (id) => {
+        try {
+            await axiosConfig.delete(API_ENDPOINTS.DELETE_CATEGORY(id));
+            setOpenDeleteAlert({ show: false, data: null });
+            setSelectedCategory(null);
+            toast.success("Category deleted successfully");
+            await fetchCategoryDetails();
+        } catch(error) {
+            toast.error(error.response?.data?.message || "Failed to delete category");
+        }
+    }
+
     return (
         <Dashboard activeMenu="Category">
             <div className="my-5 mx-auto">
-                {/* Add button to add category*/}
+                {/* Add button */}
                 <div className="flex justify-between items-center mb-5">
                     <h2 className="text-2xl font-semibold">All Categories</h2>
                     <button
@@ -112,9 +132,13 @@ const Category = () => {
                 </div>
 
                 {/* Category list */}
-                <CategoryList categories={categoryData} onEditCategory={handleEditCategory} />
+                <CategoryList
+                    categories={categoryData}
+                    onEditCategory={handleEditCategory}
+                    onDeleteCategory={handleDeleteCategory}
+                />
 
-                {/* Adding category modal*/}
+                {/* Add Category Modal */}
                 <Modal
                     isOpen={openAddCategoryModal}
                     onClose={() => setOpenAddCategoryModal(false)}
@@ -122,9 +146,10 @@ const Category = () => {
                 >
                     <AddCategoryForm onAddCategory={handleAddCategory}/>
                 </Modal>
-                {/* Updating category modal*/}
+
+                {/* Edit Category Modal */}
                 <Modal
-                    onClose={() =>{
+                    onClose={() => {
                         setOpenEditCategoryModal(false);
                         setSelectedCategory(null);
                     }}
@@ -135,6 +160,21 @@ const Category = () => {
                         initialCategoryData={selectedCategory}
                         onAddCategory={handleUpdateCategory}
                         isEditing={true}
+                    />
+                </Modal>
+
+                {/* Delete Category Modal */}
+                <Modal
+                    isOpen={openDeleteAlert.show}
+                    onClose={() => {
+                        setOpenDeleteAlert({ show: false, data: null });
+                        setSelectedCategory(null);
+                    }}
+                    title="Delete Category"
+                >
+                    <DeleteAlert
+                        content={`Are you sure you want to delete "${selectedCategory?.name}"? This action cannot be undone.`}
+                        onDelete={() => deleteCategory(openDeleteAlert.data)}
                     />
                 </Modal>
             </div>

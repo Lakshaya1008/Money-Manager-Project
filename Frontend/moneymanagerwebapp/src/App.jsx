@@ -6,6 +6,10 @@ import Income from "./pages/Income.jsx";
 import Expense from "./pages/Expense.jsx";
 import Profile from "./pages/Profile.jsx";
 import Activate from "./pages/Activate.jsx";
+// FIX: Category and Filter pages were missing from routes entirely.
+// Sidebar links to /category and /filter both hit the catch-all → /dashboard.
+import Category from "./pages/Category.jsx";
+import Filter from "./pages/Filter.jsx";
 import { useAppContext } from "./context/AppContext.jsx";
 import { Toaster } from "react-hot-toast";
 
@@ -80,7 +84,23 @@ const App = () => {
                         </ProtectedRoute>
                     }
                 />
-                {/* NEW: Profile page */}
+                {/* FIX: These routes were missing → sidebar /category and /filter links broken */}
+                <Route
+                    path="/category"
+                    element={
+                        <ProtectedRoute>
+                            <Category />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/filter"
+                    element={
+                        <ProtectedRoute>
+                            <Filter />
+                        </ProtectedRoute>
+                    }
+                />
                 <Route
                     path="/profile"
                     element={

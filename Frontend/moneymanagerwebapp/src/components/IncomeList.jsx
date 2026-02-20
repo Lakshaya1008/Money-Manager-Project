@@ -4,54 +4,59 @@ import moment from "moment";
 import {useState} from "react";
 
 const IncomeList = ({transactions, onDelete, onDownload, onEmail}) => {
-    const [loading, setLoading] = useState(false);
+    // FIX: Two separate loading states so clicking Email doesn't
+    // also show the Download spinner (and vice versa).
+    const [emailLoading, setEmailLoading] = useState(false);
+    const [downloadLoading, setDownloadLoading] = useState(false);
+
     const handleEmail = async () => {
-        setLoading(true);
+        setEmailLoading(true);
         try {
             await onEmail();
-        }finally {
-            setLoading(false);
+        } finally {
+            setEmailLoading(false);
         }
-    }
+    };
+
     const handleDownload = async () => {
-        setLoading(true);
+        setDownloadLoading(true);
         try {
             await onDownload();
-        }finally {
-            setLoading(false);
+        } finally {
+            setDownloadLoading(false);
         }
-    }
+    };
+
     return (
         <div className="card">
             <div className="flex items-center justify-between">
                 <h5 className="text-lg">Income Sources</h5>
                 <div className="flex items-center justify-end gap-2">
-                    <button disabled={loading} className="card-btn" onClick={handleEmail}>
-                        {loading ? (
+                    <button disabled={emailLoading || downloadLoading} className="card-btn" onClick={handleEmail}>
+                        {emailLoading ? (
                             <>
                                 <LoaderCircle className="w-4 h-4 animate-spin"/>
                                 Emailing...
                             </>
-                        ): (
+                        ) : (
                             <>
                                 <Mail size={15} className="text-base" />
                                 Email
                             </>
                         )}
                     </button>
-                    <button disabled={loading} className="card-btn" onClick={handleDownload}>
-                        {loading ? (
+                    <button disabled={emailLoading || downloadLoading} className="card-btn" onClick={handleDownload}>
+                        {downloadLoading ? (
                             <>
                                 <LoaderCircle className="w-4 h-4 animate-spin"/>
                                 Downloading...
                             </>
-                        ): (
+                        ) : (
                             <>
                                 <Download size={15} className="text-base" />
                                 Download
                             </>
                         )}
-
                     </button>
                 </div>
             </div>

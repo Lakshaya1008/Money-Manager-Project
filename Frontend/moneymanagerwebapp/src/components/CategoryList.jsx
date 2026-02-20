@@ -1,7 +1,7 @@
-import {Edit, Utensils} from "lucide-react";
+import {Edit, Trash2, Utensils} from "lucide-react";
 import PropTypes from "prop-types";
 
-const CategoryList = ({categories = [], onEditCategory}) => {
+const CategoryList = ({categories = [], onEditCategory, onDeleteCategory}) => {
     // Group categories by type
     const incomeCategories = categories.filter(cat => cat.type === "INCOME");
     const expenseCategories = categories.filter(cat => cat.type === "EXPENSE");
@@ -33,13 +33,22 @@ const CategoryList = ({categories = [], onEditCategory}) => {
                 </div>
             </div>
 
-            <button
-                onClick={() => onEditCategory(category)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-purple-100 rounded-lg"
-                title="Edit category"
-            >
-                <Edit size={18} className="text-purple-600" />
-            </button>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                    onClick={() => onEditCategory(category)}
+                    className="p-2 hover:bg-purple-100 rounded-lg"
+                    title="Edit category"
+                >
+                    <Edit size={18} className="text-purple-600" />
+                </button>
+                <button
+                    onClick={() => onDeleteCategory(category)}
+                    className="p-2 hover:bg-red-100 rounded-lg"
+                    title="Delete category"
+                >
+                    <Trash2 size={18} className="text-red-500" />
+                </button>
+            </div>
         </div>
     );
 
@@ -108,6 +117,7 @@ CategoryList.propTypes = {
         })
     ),
     onEditCategory: PropTypes.func.isRequired,
+    onDeleteCategory: PropTypes.func.isRequired,
 };
 
 export default CategoryList;

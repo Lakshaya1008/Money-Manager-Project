@@ -18,7 +18,8 @@ const IncomeOverview = ({transactions, onAddIncome}) => {
                     <h5 className="text-lg">
                         Income Overview
                     </h5>
-                    <p className="text-xs text-gray-400 mt-0 5">
+                    {/* FIX: was "mt-0 5" (space instead of dot) — invalid Tailwind class, no margin applied */}
+                    <p className="text-xs text-gray-400 mt-0.5">
                         Track your earnings over time and analyze your income trends.
                     </p>
                 </div>

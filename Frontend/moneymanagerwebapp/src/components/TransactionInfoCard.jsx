@@ -1,5 +1,4 @@
 import {Trash2, TrendingDown, TrendingUp, UtensilsCrossed} from "lucide-react";
-import income from "../pages/Income.jsx";
 import {addThousandsSeparator} from "../util/util.js";
 
 const TransactionInfoCard = ({icon, title, date, amount, type, hideDeleteBtn, onDelete}) => {
@@ -31,7 +30,7 @@ const TransactionInfoCard = ({icon, title, date, amount, type, hideDeleteBtn, on
 
                     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md ${getAmountStyles()}`}>
                         <h6 className="text-xs font-medium">
-                            {type === 'income' ? '+': '-'} ${addThousandsSeparator(amount)}
+                            {type === 'income' ? '+': '-'} &#8377;{addThousandsSeparator(amount)}
                         </h6>
                         {type === 'income'? (
                             <TrendingUp size={15} />
