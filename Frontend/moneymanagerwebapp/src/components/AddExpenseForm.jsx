@@ -69,7 +69,7 @@ const AddExpenseForm = ({onAddExpense, categories = []}) => {
                     <option value="">Select a category</option>
                     {categories.map((category) => (
                         <option key={category.id} value={category.id}>
-                            {category.icon} {category.name}
+                            {category.name}
                         </option>
                     ))}
                 </select>

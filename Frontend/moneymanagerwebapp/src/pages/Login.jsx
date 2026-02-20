@@ -1,128 +1,123 @@
-import { useState, useContext } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { AppContext } from "../context/AppContext.jsx";
+import {useContext, useState} from "react";
+import {Link, useNavigate} from "react-router-dom";
+import {assets} from "../assets/assets.js";
+import Input from "../components/Input.jsx";
+import {validateEmail} from "../util/validation.js";
 import axiosConfig from "../util/axiosConfig.jsx";
-import { API_ENDPOINTS } from "../util/apiEndpoints.js";
-import toast from "react-hot-toast";
-import { Eye, EyeOff, LoaderCircle } from "lucide-react";
+import {API_ENDPOINTS} from "../util/apiEndpoints.js";
+import {AppContext} from "../context/AppContext.jsx";
+import {LoaderCircle} from "lucide-react";
+import Header from "../components/Header.jsx";
 
 const Login = () => {
-    const { login } = useContext(AppContext);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const {login} = useContext(AppContext);
+
     const navigate = useNavigate();
-
-    const [form, setForm] = useState({ email: "", password: "" });
-    const [showPassword, setShowPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
-
-    const handleChange = (e) => {
-        setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    };
-
-    const validate = () => {
-        if (!form.email.trim()) { toast.error("Email is required"); return false; }
-        if (!form.password) { toast.error("Password is required"); return false; }
-        return true;
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!validate() || loading) return;
+        setIsLoading(true);
 
-        setLoading(true);
+        if (!validateEmail(email)) {
+            setError("Please enter valid email address");
+            setIsLoading(false);
+            return;
+        }
+
+        if (!password.trim()) {
+            setError("Please enter your password");
+            setIsLoading(false);
+            return;
+        }
+
+        setError("");
+
         try {
             const response = await axiosConfig.post(API_ENDPOINTS.LOGIN, {
-                // FIX: normalize email to lowercase before sending
-                // Prevents "Lakshayajain93@gmail.com" vs "lakshayajain93@gmail.com" mismatch
-                email: form.email.toLowerCase().trim(),
-                password: form.password,
+                // FIX: lowercase email before sending — prevents case mismatch login failure
+                email: email.toLowerCase().trim(),
+                password,
             });
-
-            const { token, user } = response.data;
-            login(user, token);
-            toast.success(`Welcome back, ${user.fullName || "User"}!`);
-            navigate("/dashboard");
-
-        } catch (error) {
-            const message = error.response?.data?.message || "Login failed. Please try again.";
-            toast.error(message);
+            const {token, user} = response.data;
+            if (token) {
+                login(user, token);
+                navigate("/dashboard");
+            }
+        } catch(error) {
+            if (error.response && error.response.data.message) {
+                setError(error.response.data.message);
+            } else {
+                setError("Something went wrong. Please try again.");
+            }
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50 px-4">
-            <div className="bg-white rounded-2xl shadow-md w-full max-w-md p-8">
+        <div className="h-screen w-full flex flex-col">
+            <Header />
+            <div className="flex-grow w-full relative flex items-center justify-center overflow-hidden">
+                <img src={assets.login_bg} alt="Background" className="absolute inset-0 w-full h-full object-cover filter blur-sm" />
 
-                {/* Header */}
-                <div className="text-center mb-8">
-                    <div className="text-4xl mb-3">💰</div>
-                    <h1 className="text-2xl font-bold text-gray-800">Welcome back</h1>
-                    <p className="text-sm text-gray-400 mt-1">Sign in to your account</p>
-                </div>
+                <div className="relative z-10 w-full max-w-md px-6">
+                    <div className="bg-white bg-opacity-95 backdrop-blur-sm rounded-lg shadow-2xl p-8">
+                        <h3 className="text-2xl font-semibold text-black text-center mb-2">
+                            Welcome Back
+                        </h3>
+                        <p className="text-sm text-slate-700 text-center mb-8">
+                            Please enter your details to login
+                        </p>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
-
-                    {/* Email */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            name="email"
-                            value={form.email}
-                            onChange={handleChange}
-                            placeholder="you@example.com"
-                            className="input"
-                            autoComplete="email"
-                        />
-                    </div>
-
-                    {/* Password */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Password
-                        </label>
-                        <div className="relative">
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                name="password"
-                                value={form.password}
-                                onChange={handleChange}
-                                placeholder="Enter your password"
-                                className="input pr-10"
-                                autoComplete="current-password"
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <Input
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                label="Email Address"
+                                placeholder="name@example.com"
+                                type="text"
                             />
+
+                            <Input
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                label="Password"
+                                placeholder="*********"
+                                type="password"
+                            />
+
+                            {error && (
+                                <p className="text-red-800 text-sm text-center bg-red-50 p-2 rounded">
+                                    {error}
+                                </p>
+                            )}
+
                             <button
-                                type="button"
-                                onClick={() => setShowPassword((v) => !v)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                tabIndex={-1}
+                                disabled={isLoading}
+                                className={`btn-primary w-full py-3 text-lg font-medium flex items-center justify-center gap-2 ${isLoading ? "opacity-60 cursor-not-allowed" : ""}`}
+                                type="submit"
                             >
-                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                {isLoading ? (
+                                    <>
+                                        <LoaderCircle className="animate-spin w-5 h-5" />
+                                        Logging in...
+                                    </>
+                                ) : ("LOGIN")}
                             </button>
-                        </div>
+
+                            <p className="text-sm text-slate-800 text-center mt-6">
+                                Don't have an account?{" "}
+                                <Link to="/signup" className="font-medium text-primary underline hover:text-primary-dark transition-colors">
+                                    Signup
+                                </Link>
+                            </p>
+                        </form>
                     </div>
-
-                    {/* Submit */}
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="add-btn w-full flex items-center justify-center gap-2"
-                    >
-                        {loading && <LoaderCircle size={16} className="animate-spin" />}
-                        {loading ? "Signing in…" : "Sign In"}
-                    </button>
-                </form>
-
-                {/* Footer */}
-                <p className="text-center text-sm text-gray-500 mt-6">
-                    Don&apos;t have an account?{" "}
-                    <Link to="/signup" className="text-purple-600 font-medium hover:underline">
-                        Sign up
-                    </Link>
-                </p>
+                </div>
             </div>
         </div>
     );

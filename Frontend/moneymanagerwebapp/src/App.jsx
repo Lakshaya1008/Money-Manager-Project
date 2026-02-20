@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {BrowserRouter, Navigate, Route, Routes} from "react-router-dom";
 import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
 import Home from "./pages/Home.jsx";
@@ -6,21 +6,26 @@ import Income from "./pages/Income.jsx";
 import Expense from "./pages/Expense.jsx";
 import Profile from "./pages/Profile.jsx";
 import Activate from "./pages/Activate.jsx";
-// FIX: Category and Filter pages were missing from routes entirely.
-// Sidebar links to /category and /filter both hit the catch-all → /dashboard.
 import Category from "./pages/Category.jsx";
 import Filter from "./pages/Filter.jsx";
-import { useAppContext } from "./context/AppContext.jsx";
-import { Toaster } from "react-hot-toast";
+import LandingPage from "./pages/LandingPage.jsx";
+import {useAppContext} from "./context/AppContext.jsx";
+import {Toaster} from "react-hot-toast";
 
-const ProtectedRoute = ({ children }) => {
-    const { token } = useAppContext();
+// Root: if logged in → dashboard, else → landing page (matches original behaviour)
+const Root = () => {
+    const {token} = useAppContext();
+    return token ? <Navigate to="/dashboard" replace /> : <Navigate to="/home" replace />;
+};
+
+const ProtectedRoute = ({children}) => {
+    const {token} = useAppContext();
     if (!token) return <Navigate to="/login" replace />;
     return children;
 };
 
-const PublicRoute = ({ children }) => {
-    const { token } = useAppContext();
+const PublicRoute = ({children}) => {
+    const {token} = useAppContext();
     if (token) return <Navigate to="/dashboard" replace />;
     return children;
 };
@@ -32,13 +37,17 @@ const App = () => {
                 position="top-right"
                 toastOptions={{
                     duration: 3000,
-                    style: { fontSize: "14px" },
+                    style: {fontSize: "14px"},
                 }}
             />
             <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<Navigate to="/login" replace />} />
+                {/* Root — smart redirect */}
+                <Route path="/" element={<Root />} />
 
+                {/* Landing page (public) */}
+                <Route path="/home" element={<LandingPage />} />
+
+                {/* Auth pages */}
                 <Route
                     path="/login"
                     element={
@@ -56,7 +65,7 @@ const App = () => {
                     }
                 />
 
-                {/* Account activation — no auth required */}
+                {/* Email activation — no auth required */}
                 <Route path="/activate" element={<Activate />} />
 
                 {/* Protected routes */}
@@ -84,7 +93,6 @@ const App = () => {
                         </ProtectedRoute>
                     }
                 />
-                {/* FIX: These routes were missing → sidebar /category and /filter links broken */}
                 <Route
                     path="/category"
                     element={
