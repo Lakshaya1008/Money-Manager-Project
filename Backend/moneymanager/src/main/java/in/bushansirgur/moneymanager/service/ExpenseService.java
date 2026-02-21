@@ -109,6 +109,11 @@ public class ExpenseService {
         return list.stream().map(this::toDTO).toList();
     }
 
+    public List<ExpenseDTO> getExpensesForUserOnDateRange(Long profileId, LocalDateTime start, LocalDateTime end) {
+        List<ExpenseEntity> list = expenseRepository.findByProfileIdAndDateBetween(profileId, start, end);
+        return list.stream().map(this::toDTO).toList();
+    }
+
     //helper methods
     private ExpenseEntity toEntity(ExpenseDTO dto, ProfileEntity profile, CategoryEntity category) {
         return ExpenseEntity.builder()

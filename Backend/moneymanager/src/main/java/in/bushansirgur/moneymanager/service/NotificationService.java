@@ -10,6 +10,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -44,8 +45,11 @@ public class NotificationService {
     public void sendDailyExpenseSummary() {
         log.info("Job started: sendDailyExpenseSummary()");
         List<ProfileEntity> profiles = profileRepository.findAll();
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.atTime(23, 59, 59);
         for (ProfileEntity profile : profiles) {
-            List<ExpenseDTO> todaysExpenses = expenseService.getExpensesForUserOnDate(profile.getId(), LocalDate.now());
+            List<ExpenseDTO> todaysExpenses = expenseService.getExpensesForUserOnDateRange(profile.getId(), startOfDay, endOfDay);
             if (!todaysExpenses.isEmpty()) {
                 StringBuilder table = new StringBuilder();
                 table.append("<table style='border-collapse:collapse;width:100%;'>");
