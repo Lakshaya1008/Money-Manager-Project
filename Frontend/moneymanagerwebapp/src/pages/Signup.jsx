@@ -12,13 +12,13 @@ import uploadProfileImage from "../util/uploadProfileImage.js";
 import Header from "../components/Header.jsx";
 
 const Signup = () => {
-    const [fullName, setFullName] = useState("");
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [profilePhoto, setProfilePhoto] = useState(null);
-
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -26,59 +26,60 @@ const Signup = () => {
         let profileImageUrl = "";
         setIsLoading(true);
 
-        if (!fullName.trim()) {
-            setError("Please enter your full name");
+        // Basic validation
+        if (!firstName.trim()) {
+            setError("Please enter your first name");
             setIsLoading(false);
             return;
         }
-
+        if (!lastName.trim()) {
+            setError("Please enter your last name");
+            setIsLoading(false);
+            return;
+        }
         if (!validateEmail(email)) {
-            setError("Please enter valid email address");
+            setError("Please enter a valid email address");
             setIsLoading(false);
             return;
         }
-
         if (!password.trim()) {
             setError("Please enter your password");
             setIsLoading(false);
             return;
         }
-
-        if (password.length < 6) {
+        if (password.trim().length < 6) {
             setError("Password must be at least 6 characters");
             setIsLoading(false);
             return;
         }
-
         setError("");
 
         try {
-            // Upload photo to Cloudinary if selected
             if (profilePhoto) {
-                try {
+                if (typeof profilePhoto === "string") {
+                    profileImageUrl = profilePhoto;
+                } else {
                     const imageUrl = await uploadProfileImage(profilePhoto);
                     profileImageUrl = imageUrl || "";
-                } catch (uploadErr) {
-                    // Photo upload failed — register without photo, warn user
-                    toast.error("Photo upload failed. Registering without photo.");
                 }
             }
 
+            // Join first + last name before sending to backend
+            const fullName = `${firstName.trim()} ${lastName.trim()}`;
+
             const response = await axiosConfig.post(API_ENDPOINTS.REGISTER, {
                 fullName,
-                // FIX: lowercase email before sending — must match login normalization
-                email: email.toLowerCase().trim(),
+                email: email.toLowerCase(),
                 password,
                 profileImageUrl,
             });
 
             if (response.status === 201) {
-                toast.success("Account created! Please check your email to activate it.");
+                toast.success("Account created! Please check your email to activate your account.");
                 navigate("/login");
             }
-        } catch(err) {
-            const message = err.response?.data?.message || err.message || "Something went wrong";
-            setError(message);
+        } catch (err) {
+            setError(err.response?.data?.message || "Failed to create account. Please try again.");
         } finally {
             setIsLoading(false);
         }
@@ -89,31 +90,44 @@ const Signup = () => {
             <Header />
             <div className="flex-grow w-full relative flex items-center justify-center overflow-hidden">
                 {/* Background image with blur */}
-                <img src={assets.login_bg} alt="Background" className="absolute inset-0 w-full h-full object-cover filter blur-sm" />
-
+                <img
+                    src={assets.login_bg}
+                    alt="Background"
+                    className="absolute inset-0 w-full h-full object-cover filter blur-sm"
+                />
                 <div className="relative z-10 w-full max-w-lg px-6">
                     <div className="bg-white bg-opacity-95 backdrop-blur-sm rounded-lg shadow-2xl p-8 max-h-[90vh] overflow-y-auto">
                         <h3 className="text-2xl font-semibold text-black text-center mb-2">
                             Create An Account
                         </h3>
-                        <p className="text-sm text-slate-700 text-center mb-8">
+                        <p className="text-sm text-slate-700 text-center mb-6">
                             Start tracking your spendings by joining with us.
                         </p>
-
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="flex justify-center mb-6">
-                                <ProfilePhotoSelector image={profilePhoto} setImage={setProfilePhoto} />
-                            </div>
+                            {/* Profile photo / avatar selector */}
+                            <ProfilePhotoSelector
+                                image={profilePhoto}
+                                setImage={setProfilePhoto}
+                            />
 
                             <div className="flex flex-col gap-4">
-                                <Input
-                                    value={fullName}
-                                    onChange={(e) => setFullName(e.target.value)}
-                                    label="Full Name"
-                                    placeholder="John Doe"
-                                    type="text"
-                                />
-
+                                {/* First Name & Last Name side by side */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Input
+                                        value={firstName}
+                                        onChange={(e) => setFirstName(e.target.value)}
+                                        label="First Name"
+                                        placeholder="John"
+                                        type="text"
+                                    />
+                                    <Input
+                                        value={lastName}
+                                        onChange={(e) => setLastName(e.target.value)}
+                                        label="Last Name"
+                                        placeholder="Doe"
+                                        type="text"
+                                    />
+                                </div>
                                 <Input
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
@@ -121,12 +135,11 @@ const Signup = () => {
                                     placeholder="name@example.com"
                                     type="text"
                                 />
-
                                 <Input
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     label="Password"
-                                    placeholder="Min 6 characters"
+                                    placeholder="Min. 6 characters"
                                     type="password"
                                 />
                             </div>
@@ -139,20 +152,27 @@ const Signup = () => {
 
                             <button
                                 disabled={isLoading}
-                                className={`btn-primary w-full py-3 text-lg font-medium flex items-center justify-center gap-2 ${isLoading ? "opacity-60 cursor-not-allowed" : ""}`}
+                                className={`btn-primary w-full py-3 text-lg font-medium flex items-center justify-center gap-2 ${
+                                    isLoading ? "opacity-60 cursor-not-allowed" : ""
+                                }`}
                                 type="submit"
                             >
                                 {isLoading ? (
                                     <>
                                         <LoaderCircle className="animate-spin w-5 h-5" />
-                                        Signing Up...
+                                        Creating Account...
                                     </>
-                                ) : ("SIGN UP")}
+                                ) : (
+                                    "SIGN UP"
+                                )}
                             </button>
 
-                            <p className="text-sm text-slate-800 text-center mt-6">
+                            <p className="text-sm text-center text-slate-700 mt-3">
                                 Already have an account?{" "}
-                                <Link to="/login" className="font-medium text-primary underline hover:text-primary-dark transition-colors">
+                                <Link
+                                    to="/login"
+                                    className="font-medium text-purple-900 underline hover:text-purple-700"
+                                >
                                     Login
                                 </Link>
                             </p>
