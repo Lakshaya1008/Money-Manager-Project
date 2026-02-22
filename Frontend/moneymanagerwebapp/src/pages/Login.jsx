@@ -15,7 +15,6 @@ const Login = () => {
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const {login} = useContext(AppContext);
-
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -27,18 +26,15 @@ const Login = () => {
             setIsLoading(false);
             return;
         }
-
         if (!password.trim()) {
             setError("Please enter your password");
             setIsLoading(false);
             return;
         }
-
         setError("");
 
         try {
             const response = await axiosConfig.post(API_ENDPOINTS.LOGIN, {
-                // FIX: lowercase email before sending — prevents case mismatch login failure
                 email: email.toLowerCase().trim(),
                 password,
             });
@@ -47,12 +43,8 @@ const Login = () => {
                 login(user, token);
                 navigate("/dashboard");
             }
-        } catch(error) {
-            if (error.response && error.response.data.message) {
-                setError(error.response.data.message);
-            } else {
-                setError("Something went wrong. Please try again.");
-            }
+        } catch (error) {
+            setError(error.response?.data?.message || "Something went wrong. Please try again.");
         } finally {
             setIsLoading(false);
         }
@@ -62,7 +54,8 @@ const Login = () => {
         <div className="h-screen w-full flex flex-col">
             <Header />
             <div className="flex-grow w-full relative flex items-center justify-center overflow-hidden">
-                <img src={assets.login_bg} alt="Background" className="absolute inset-0 w-full h-full object-cover filter blur-sm" />
+                <img src={assets.login_bg} alt="Background"
+                     className="absolute inset-0 w-full h-full object-cover filter blur-sm" />
 
                 <div className="relative z-10 w-full max-w-md px-6">
                     <div className="bg-white bg-opacity-95 backdrop-blur-sm rounded-lg shadow-2xl p-8">
@@ -81,14 +74,24 @@ const Login = () => {
                                 placeholder="name@example.com"
                                 type="text"
                             />
-
-                            <Input
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                label="Password"
-                                placeholder="*********"
-                                type="password"
-                            />
+                            <div>
+                                <Input
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    label="Password"
+                                    placeholder="*********"
+                                    type="password"
+                                />
+                                {/* Forgot password link — sits right below password field */}
+                                <div className="flex justify-end mt-1">
+                                    <Link
+                                        to="/forgot-password"
+                                        className="text-xs text-purple-700 hover:text-purple-900 hover:underline"
+                                    >
+                                        Forgot password?
+                                    </Link>
+                                </div>
+                            </div>
 
                             {error && (
                                 <p className="text-red-800 text-sm text-center bg-red-50 p-2 rounded">
@@ -102,16 +105,13 @@ const Login = () => {
                                 type="submit"
                             >
                                 {isLoading ? (
-                                    <>
-                                        <LoaderCircle className="animate-spin w-5 h-5" />
-                                        Logging in...
-                                    </>
-                                ) : ("LOGIN")}
+                                    <><LoaderCircle className="animate-spin w-5 h-5" /> Logging in...</>
+                                ) : "LOGIN"}
                             </button>
 
                             <p className="text-sm text-slate-800 text-center mt-6">
                                 Don't have an account?{" "}
-                                <Link to="/signup" className="font-medium text-primary underline hover:text-primary-dark transition-colors">
+                                <Link to="/signup" className="font-medium text-primary underline hover:text-primary-dark">
                                     Signup
                                 </Link>
                             </p>

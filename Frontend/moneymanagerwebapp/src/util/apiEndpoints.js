@@ -1,18 +1,19 @@
-// FIX: export BASE_URL so backendWakeUp.js can import it
 export const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api/v1.0";
 
 export const API_ENDPOINTS = {
     // ─── Auth (public) ──────────────────────────────────────────────
-    REGISTER:       `${BASE_URL}/register`,
-    LOGIN:          `${BASE_URL}/login`,
-    ACTIVATE:       `${BASE_URL}/activate`,      // GET ?token=
+    REGISTER:           `${BASE_URL}/register`,
+    LOGIN:              `${BASE_URL}/login`,
+    ACTIVATE:           `${BASE_URL}/activate`,
+    FORGOT_PASSWORD:    `${BASE_URL}/forgot-password`,   // ← NEW
+    RESET_PASSWORD:     `${BASE_URL}/reset-password`,    // ← NEW
 
     // ─── Profile (protected) ────────────────────────────────────────
-    GET_PROFILE:    `${BASE_URL}/profile`,        // GET
-    UPDATE_PROFILE: `${BASE_URL}/profile`,        // PUT
-    GET_USER_INFO:  `${BASE_URL}/profile`,        // alias used by useUser hook
-    UPDATE_NAME:    `${BASE_URL}/profile/update-name`,     // PUT  ← NEW
-    CHANGE_PASSWORD:`${BASE_URL}/profile/change-password`, // PUT  ← NEW
+    GET_PROFILE:        `${BASE_URL}/profile`,
+    UPDATE_PROFILE:     `${BASE_URL}/profile`,
+    GET_USER_INFO:      `${BASE_URL}/profile`,
+    UPDATE_NAME:        `${BASE_URL}/profile/update-name`,
+    CHANGE_PASSWORD:    `${BASE_URL}/profile/change-password`,
 
     // ─── Categories ─────────────────────────────────────────────────
     GET_ALL_CATEGORIES:   `${BASE_URL}/categories`,
@@ -51,6 +52,6 @@ export const API_ENDPOINTS = {
     // ─── Health ─────────────────────────────────────────────────────
     HEALTH: `${BASE_URL}/health`,
 
-    // ─── Cloudinary image upload (direct browser → Cloudinary) ──────
+    // ─── Cloudinary ─────────────────────────────────────────────────
     UPLOAD_IMAGE: `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
 };

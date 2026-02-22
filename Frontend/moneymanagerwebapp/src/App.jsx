@@ -8,6 +8,8 @@ import Profile from "./pages/Profile.jsx";
 import Activate from "./pages/Activate.jsx";
 import Category from "./pages/Category.jsx";
 import Filter from "./pages/Filter.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import ResetPassword from "./pages/ResetPassword.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
 import {useAppContext} from "./context/AppContext.jsx";
 import {Toaster} from "react-hot-toast";
@@ -65,8 +67,10 @@ const App = () => {
                     }
                 />
 
-                {/* Email activation — no auth required */}
+                {/* Email activation & password reset — no auth required */}
                 <Route path="/activate" element={<Activate />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
 
                 {/* Protected routes */}
                 <Route
