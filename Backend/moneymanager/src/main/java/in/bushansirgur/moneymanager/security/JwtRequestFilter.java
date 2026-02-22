@@ -99,13 +99,14 @@ public class JwtRequestFilter extends OncePerRequestFilter {
      * Check if the request path is a public endpoint that doesn't require authentication
      */
     private boolean isPublicEndpoint(String requestPath) {
-        // Remove context path if present
         String path = requestPath.replace("/api/v1.0", "");
         return path.equals("/status") ||
-               path.equals("/health") ||
-               path.equals("/register") ||
-               path.startsWith("/activate") ||
-               path.equals("/login");
+                path.equals("/health") ||
+                path.equals("/register") ||
+                path.startsWith("/activate") ||
+                path.equals("/login") ||
+                path.equals("/forgot-password") ||   // ← NEW
+                path.equals("/reset-password");       // ← NEW
     }
 
     /**
