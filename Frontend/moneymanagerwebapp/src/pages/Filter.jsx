@@ -11,6 +11,7 @@ import moment from "moment";
 const Filter = () => {
     useUser();
     const [type, setType] = useState("income");
+    const [appliedType, setAppliedType] = useState("income"); // tracks what was actually searched
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [keyword, setKeyword] = useState("");
@@ -32,12 +33,12 @@ const Filter = () => {
                 sortOrder
             });
             setTransactions(response.data);
-        }catch (error) {
+            setAppliedType(type); // only update after successful search
+        } catch (error) {
             toast.error(error.response?.data?.message || "Failed to fetch transactions");
-        }finally {
+        } finally {
             setLoading(false);
         }
-
     }
 
     return (
@@ -96,12 +97,12 @@ const Filter = () => {
                     <div className="flex items-center justify-between mb-4">
                         <h5 className="text-lg font-semibold">Transactions</h5>
                     </div>
-                    {transactions.length === 0 && !loading? (
+                    {transactions.length === 0 && !loading ? (
                         <p className="text-gray-500">Select the filters and click apply to filter the transactions</p>
-                    ): ""}
+                    ) : ""}
                     {loading ? (
                         <p className="text-gray-500">Loading Transactions</p>
-                    ): ("")}
+                    ) : ("")}
                     {transactions.map((transaction) => (
                         <TransactionInfoCard
                             key={transaction.id}
@@ -109,7 +110,7 @@ const Filter = () => {
                             icon={transaction.icon}
                             date={moment(transaction.date).format('Do MMM YYYY')}
                             amount={transaction.amount}
-                            type={type}
+                            type={appliedType}
                             hideDeleteBtn
                         />
                     ))}
