@@ -14,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
+@RequestMapping("/api/v1.0")
 @RequiredArgsConstructor
 public class ProfileController {
 
@@ -21,22 +22,22 @@ public class ProfileController {
 
     @PostMapping("/register")
     public ResponseEntity<ProfileDTO> registerProfile(@RequestBody ProfileDTO profileDTO) {
-        ProfileDTO registered = profileService.registerProfile(profileDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(registered);
+        ProfileDTO registeredProfile = profileService.registerProfile(profileDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(registeredProfile);
     }
 
     @GetMapping("/activate")
     public ResponseEntity<Map<String, Object>> activateProfile(@RequestParam String token) {
-        boolean activated = profileService.activateProfile(token);
+        boolean isActivated = profileService.activateProfile(token);
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("timestamp", LocalDateTime.now().toString());
-        if (activated) {
+        if (isActivated) {
             response.put("status", HttpStatus.OK.value());
-            response.put("message", "Account activated successfully. You can now login.");
+            response.put("message", "Profile activated successfully. You can now login to your account.");
             return ResponseEntity.ok(response);
+        } else {
+            throw new ResourceNotFoundException("Activation token not found or already used. Please request a new activation email.");
         }
-        throw new ResourceNotFoundException(
-                "Activation token not found or already used. Please request a new activation email.");
     }
 
     @PostMapping("/login")
@@ -45,15 +46,35 @@ public class ProfileController {
         return ResponseEntity.ok(response);
     }
 
-    /** GET /profile — current authenticated user */
     @GetMapping("/profile")
-    public ResponseEntity<ProfileDTO> getProfile() {
-        return ResponseEntity.ok(profileService.getPublicProfile(null));
+    public ResponseEntity<ProfileDTO> getPublicProfile() {
+        ProfileDTO profileDTO = profileService.getPublicProfile(null);
+        return ResponseEntity.ok(profileDTO);
     }
 
-    /** PUT /profile — update name + avatar */
     @PutMapping("/profile")
     public ResponseEntity<ProfileDTO> updateProfile(@RequestBody ProfileDTO profileDTO) {
-        return ResponseEntity.ok(profileService.updateProfile(profileDTO));
+        ProfileDTO updatedProfile = profileService.updateProfile(profileDTO);
+        return ResponseEntity.ok(updatedProfile);
+    }
+
+    // ── NEW: Update name only ─────────────────────────────────────────
+    @PutMapping("/profile/update-name")
+    public ResponseEntity<ProfileDTO> updateName(@RequestBody Map<String, String> body) {
+        String fullName = body.get("fullName");
+        ProfileDTO updatedProfile = profileService.updateName(fullName);
+        return ResponseEntity.ok(updatedProfile);
+    }
+
+    // ── NEW: Change password ──────────────────────────────────────────
+    @PutMapping("/profile/change-password")
+    public ResponseEntity<Map<String, Object>> changePassword(@RequestBody Map<String, String> body) {
+        String oldPassword = body.get("oldPassword");
+        String newPassword = body.get("newPassword");
+        profileService.changePassword(oldPassword, newPassword);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("timestamp", LocalDateTime.now().toString());
+        response.put("message", "Password changed successfully");
+        return ResponseEntity.ok(response);
     }
 }

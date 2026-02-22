@@ -11,6 +11,7 @@ import in.bushansirgur.moneymanager.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,6 +19,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -34,179 +36,184 @@ public class ProfileService {
     @Value("${app.activation.url}")
     private String activationURL;
 
-    // ─── Registration ─────────────────────────────────────────────────────────
-
     public ProfileDTO registerProfile(ProfileDTO profileDTO) {
-        // FIX: Normalize email to lowercase before any validation or storage.
-        // Prevents case-mismatch login issues (e.g. register "John@Gmail.com",
-        // can't login with "john@gmail.com")
-        if (profileDTO.getEmail() != null) {
-            profileDTO.setEmail(profileDTO.getEmail().toLowerCase().trim());
-        }
-
-        if (profileDTO.getEmail() == null || profileDTO.getEmail().isEmpty())
+        if (profileDTO.getEmail() == null || profileDTO.getEmail().trim().isEmpty()) {
             throw new ValidationException("email", "Email is required");
-        if (!isValidEmail(profileDTO.getEmail()))
-            throw new ValidationException("email",
-                    "Invalid email format. Please provide a valid email address.");
-        if (profileRepository.findByEmail(profileDTO.getEmail()).isPresent())
-            throw new DuplicateResourceException(
-                    "An account with email '" + profileDTO.getEmail()
-                            + "' already exists. Please login instead or use a different email.");
-        if (profileDTO.getFullName() == null || profileDTO.getFullName().trim().isEmpty())
+        }
+        if (!isValidEmail(profileDTO.getEmail())) {
+            throw new ValidationException("email", "Invalid email format. Please provide a valid email address.");
+        }
+        // Normalize email to lowercase before saving
+        String normalizedEmail = profileDTO.getEmail().toLowerCase().trim();
+        if (profileRepository.findByEmail(normalizedEmail).isPresent()) {
+            throw new DuplicateResourceException("An account with email '" + normalizedEmail + "' already exists. Please login instead or use a different email.");
+        }
+        if (profileDTO.getFullName() == null || profileDTO.getFullName().trim().isEmpty()) {
             throw new ValidationException("fullName", "Full name is required");
-        if (profileDTO.getPassword() == null || profileDTO.getPassword().isEmpty())
+        }
+        if (profileDTO.getPassword() == null || profileDTO.getPassword().isEmpty()) {
             throw new ValidationException("password", "Password is required");
-        if (profileDTO.getPassword().length() < 6)
-            throw new ValidationException("password",
-                    "Password must be at least 6 characters long");
-
+        }
+        if (profileDTO.getPassword().length() < 6) {
+            throw new ValidationException("password", "Password must be at least 6 characters long");
+        }
+        profileDTO.setEmail(normalizedEmail);
         ProfileEntity newProfile = toEntity(profileDTO);
         newProfile.setActivationToken(UUID.randomUUID().toString());
         newProfile = profileRepository.save(newProfile);
 
         String activationLink = activationURL + "/activate?token=" + newProfile.getActivationToken();
         String subject = "Activate your Money Manager account";
-        String body = "<p>Hi " + newProfile.getFullName() + ",</p>"
-                + "<p>Click the link below to activate your account:</p>"
-                + "<p><a href=\"" + activationLink + "\" style=\""
-                + "display:inline-block;padding:10px 20px;background-color:#7c3aed;"
-                + "color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;"
-                + "\">Activate Account</a></p>"
-                + "<p style=\"color:#888;font-size:12px;\">If you did not create this account, please ignore this email.</p>";
+        String body = "Click on the following link to activate your account: " + activationLink;
         emailService.sendEmail(newProfile.getEmail(), subject, body);
+
         return toDTO(newProfile);
     }
 
-    // ─── Activation ───────────────────────────────────────────────────────────
+    private boolean isValidEmail(String email) {
+        return email != null && email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    }
 
-    /**
-     * FIX: Clears the activation token after use so it cannot be reused.
-     */
+    public ProfileEntity toEntity(ProfileDTO profileDTO) {
+        return ProfileEntity.builder()
+                .id(profileDTO.getId())
+                .fullName(profileDTO.getFullName())
+                .email(profileDTO.getEmail())
+                .password(passwordEncoder.encode(profileDTO.getPassword()))
+                .profileImageUrl(profileDTO.getProfileImageUrl())
+                .createdAt(profileDTO.getCreatedAt())
+                .updatedAt(profileDTO.getUpdatedAt())
+                .build();
+    }
+
+    public ProfileDTO toDTO(ProfileEntity profileEntity) {
+        return ProfileDTO.builder()
+                .id(profileEntity.getId())
+                .fullName(profileEntity.getFullName())
+                .email(profileEntity.getEmail())
+                .profileImageUrl(profileEntity.getProfileImageUrl())
+                .createdAt(profileEntity.getCreatedAt())
+                .updatedAt(profileEntity.getUpdatedAt())
+                .build();
+    }
+
     public boolean activateProfile(String activationToken) {
         return profileRepository.findByActivationToken(activationToken)
                 .map(profile -> {
                     profile.setIsActive(true);
-                    profile.setActivationToken(null); // security: one-time use
+                    profile.setActivationToken(null); // clear token after use
                     profileRepository.save(profile);
                     return true;
                 })
                 .orElse(false);
     }
 
-    // ─── Authentication ───────────────────────────────────────────────────────
-
-    public Map<String, Object> authenticateAndGenerateToken(AuthDTO authDTO) {
-        if (authDTO.getEmail() == null || authDTO.getEmail().trim().isEmpty())
-            throw new ValidationException("email", "Email is required");
-        if (authDTO.getPassword() == null || authDTO.getPassword().isEmpty())
-            throw new ValidationException("password", "Password is required");
-
-        // FIX: Normalize email before lookup — matches what registration stores
-        String email = authDTO.getEmail().toLowerCase().trim();
-
-        ProfileEntity profile = profileRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "No account found with email '" + email + "'. Please register first."));
-
-        if (!Boolean.TRUE.equals(profile.getIsActive()))
-            throw new in.bushansirgur.moneymanager.exception.AuthenticationException(
-                    "Account is not activated. Please check your email for the activation "
-                            + "link and activate your account before logging in.");
-
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(email, authDTO.getPassword()));
-            String token = jwtUtil.generateToken(email);
-            return Map.of("token", token, "user", getPublicProfile(email));
-
-        } catch (org.springframework.security.authentication.DisabledException e) {
-            throw new in.bushansirgur.moneymanager.exception.AuthenticationException(
-                    "Account is not activated. Please check your email for the activation link.");
-        } catch (org.springframework.security.authentication.LockedException e) {
-            throw new in.bushansirgur.moneymanager.exception.AuthenticationException(
-                    "Account is locked. Please contact support for assistance.");
-        } catch (org.springframework.security.authentication.BadCredentialsException e) {
-            throw new in.bushansirgur.moneymanager.exception.AuthenticationException(
-                    "Invalid password. Please check your password and try again.");
-        }
-    }
-
-    // ─── Profile Update ───────────────────────────────────────────────────────
-
-    /**
-     * Update currently authenticated user's profile.
-     * Only fullName and profileImageUrl can be changed.
-     */
-    public ProfileDTO updateProfile(ProfileDTO profileDTO) {
-        ProfileEntity current = getCurrentProfile();
-
-        if (profileDTO.getFullName() != null) {
-            if (profileDTO.getFullName().trim().isEmpty())
-                throw new ValidationException("fullName", "Full name cannot be empty");
-            current.setFullName(profileDTO.getFullName().trim());
-        }
-
-        if (profileDTO.getProfileImageUrl() != null) {
-            String url = profileDTO.getProfileImageUrl().trim();
-            current.setProfileImageUrl(url.isEmpty() ? null : url);
-        }
-
-        current = profileRepository.save(current);
-        return toDTO(current);
-    }
-
-    // ─── Helpers ──────────────────────────────────────────────────────────────
-
-    public ProfileEntity getCurrentProfile() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return profileRepository.findByEmail(auth.getName())
-                .orElseThrow(() -> new UsernameNotFoundException(
-                        "Profile not found with email: " + auth.getName()));
-    }
-
-    public ProfileDTO getPublicProfile(String email) {
-        ProfileEntity user = (email == null)
-                ? getCurrentProfile()
-                : profileRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException(
-                        "Profile not found with email: " + email));
-        return toDTO(user);
-    }
-
     public boolean isAccountActive(String email) {
-        return profileRepository.findByEmail(email.toLowerCase().trim())
+        return profileRepository.findByEmail(email)
                 .map(ProfileEntity::getIsActive)
                 .orElse(false);
     }
 
     public boolean emailExists(String email) {
-        return profileRepository.findByEmail(email.toLowerCase().trim()).isPresent();
+        return profileRepository.findByEmail(email).isPresent();
     }
 
-    public ProfileEntity toEntity(ProfileDTO dto) {
-        return ProfileEntity.builder()
-                .id(dto.getId())
-                .fullName(dto.getFullName() != null ? dto.getFullName().trim() : null)
-                .email(dto.getEmail()) // already normalized before calling toEntity
-                .password(passwordEncoder.encode(dto.getPassword()))
-                .profileImageUrl(dto.getProfileImageUrl())
-                .build();
+    public ProfileEntity getCurrentProfile() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return profileRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new UsernameNotFoundException("Profile not found with email: " + authentication.getName()));
     }
 
-    public ProfileDTO toDTO(ProfileEntity entity) {
+    public ProfileDTO getPublicProfile(String email) {
+        ProfileEntity currentUser;
+        if (email == null) {
+            currentUser = getCurrentProfile();
+        } else {
+            currentUser = profileRepository.findByEmail(email)
+                    .orElseThrow(() -> new UsernameNotFoundException("Profile not found with email: " + email));
+        }
         return ProfileDTO.builder()
-                .id(entity.getId())
-                .fullName(entity.getFullName())
-                .email(entity.getEmail())
-                .profileImageUrl(entity.getProfileImageUrl())
-                .createdAt(entity.getCreatedAt())
-                .updatedAt(entity.getUpdatedAt())
+                .id(currentUser.getId())
+                .fullName(currentUser.getFullName())
+                .email(currentUser.getEmail())
+                .profileImageUrl(currentUser.getProfileImageUrl())
+                .createdAt(currentUser.getCreatedAt())
+                .updatedAt(currentUser.getUpdatedAt())
                 .build();
     }
 
-    private boolean isValidEmail(String email) {
-        return email != null
-                && email.matches("^[a-z0-9+_.-]+@[a-z0-9.-]+\\.[a-z]{2,}$");
+    public ProfileDTO updateProfile(ProfileDTO profileDTO) {
+        ProfileEntity currentProfile = getCurrentProfile();
+        if (profileDTO.getFullName() != null && !profileDTO.getFullName().trim().isEmpty()) {
+            currentProfile.setFullName(profileDTO.getFullName().trim());
+        }
+        if (profileDTO.getProfileImageUrl() != null) {
+            currentProfile.setProfileImageUrl(profileDTO.getProfileImageUrl());
+        }
+        currentProfile = profileRepository.save(currentProfile);
+        return toDTO(currentProfile);
+    }
+
+    // ── NEW: Update full name only ────────────────────────────────────
+    public ProfileDTO updateName(String fullName) {
+        if (fullName == null || fullName.trim().isEmpty()) {
+            throw new ValidationException("fullName", "Full name cannot be empty");
+        }
+        ProfileEntity currentProfile = getCurrentProfile();
+        currentProfile.setFullName(fullName.trim());
+        currentProfile = profileRepository.save(currentProfile);
+        return toDTO(currentProfile);
+    }
+
+    // ── NEW: Change password ──────────────────────────────────────────
+    public void changePassword(String oldPassword, String newPassword) {
+        if (oldPassword == null || oldPassword.trim().isEmpty()) {
+            throw new ValidationException("oldPassword", "Current password is required");
+        }
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new ValidationException("newPassword", "New password must be at least 6 characters");
+        }
+        ProfileEntity currentProfile = getCurrentProfile();
+        // Verify old password matches
+        if (!passwordEncoder.matches(oldPassword, currentProfile.getPassword())) {
+            throw new BadCredentialsException("Current password is incorrect");
+        }
+        currentProfile.setPassword(passwordEncoder.encode(newPassword));
+        profileRepository.save(currentProfile);
+    }
+
+    public Map<String, Object> authenticateAndGenerateToken(AuthDTO authDTO) {
+        if (authDTO.getEmail() == null || authDTO.getEmail().trim().isEmpty()) {
+            throw new ValidationException("email", "Email is required");
+        }
+        if (authDTO.getPassword() == null || authDTO.getPassword().trim().isEmpty()) {
+            throw new ValidationException("password", "Password is required");
+        }
+        String normalizedEmail = authDTO.getEmail().toLowerCase().trim();
+        if (!emailExists(normalizedEmail)) {
+            throw new ResourceNotFoundException("No account found with email '" + normalizedEmail + "'. Please register first.");
+        }
+        if (!isAccountActive(normalizedEmail)) {
+            throw new ValidationException("account", "Account is not activated. Please check your email and activate your account first.");
+        }
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(normalizedEmail, authDTO.getPassword())
+            );
+        } catch (BadCredentialsException e) {
+            throw new BadCredentialsException("Incorrect password. Please try again.");
+        }
+        ProfileEntity profile = profileRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        String token = jwtUtil.generateToken(normalizedEmail);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("token", token);
+        response.put("id", profile.getId());
+        response.put("fullName", profile.getFullName());
+        response.put("email", profile.getEmail());
+        response.put("profileImageUrl", profile.getProfileImageUrl());
+        response.put("createdAt", profile.getCreatedAt());
+        response.put("updatedAt", profile.getUpdatedAt());
+        return response;
     }
 }
