@@ -5,6 +5,7 @@ import in.bushansirgur.moneymanager.dto.ProfileDTO;
 import in.bushansirgur.moneymanager.entity.ProfileEntity;
 import in.bushansirgur.moneymanager.exception.DuplicateResourceException;
 import in.bushansirgur.moneymanager.exception.ResourceNotFoundException;
+import in.bushansirgur.moneymanager.exception.UnauthorizedException;
 import in.bushansirgur.moneymanager.exception.ValidationException;
 import in.bushansirgur.moneymanager.repository.ProfileRepository;
 import in.bushansirgur.moneymanager.util.JwtUtil;
@@ -43,7 +44,6 @@ public class ProfileService {
         if (!isValidEmail(profileDTO.getEmail())) {
             throw new ValidationException("email", "Invalid email format. Please provide a valid email address.");
         }
-        // Normalize email to lowercase before saving
         String normalizedEmail = profileDTO.getEmail().toLowerCase().trim();
         if (profileRepository.findByEmail(normalizedEmail).isPresent()) {
             throw new DuplicateResourceException("An account with email '" + normalizedEmail + "' already exists. Please login instead or use a different email.");
@@ -62,10 +62,15 @@ public class ProfileService {
         newProfile.setActivationToken(UUID.randomUUID().toString());
         newProfile = profileRepository.save(newProfile);
 
-        String activationLink = activationURL + "/activate?token=" + newProfile.getActivationToken();
-        String subject = "Activate your Money Manager account";
-        String body = "Click on the following link to activate your account: " + activationLink;
-        emailService.sendEmail(newProfile.getEmail(), subject, body);
+        try {
+            String activationLink = activationURL + "/activate?token=" + newProfile.getActivationToken();
+            String subject = "Activate your Money Manager account";
+            String body = "Click on the following link to activate your account: " + activationLink;
+            emailService.sendEmail(newProfile.getEmail(), subject, body);
+        } catch (Exception emailEx) {
+            // Email failure must NOT prevent registration - profile is already saved
+            System.err.println("Warning: Failed to send activation email to " + newProfile.getEmail() + ": " + emailEx.getMessage());
+        }
 
         return toDTO(newProfile);
     }
@@ -101,7 +106,7 @@ public class ProfileService {
         return profileRepository.findByActivationToken(activationToken)
                 .map(profile -> {
                     profile.setIsActive(true);
-                    profile.setActivationToken(null); // clear token after use
+                    profile.setActivationToken(null);
                     profileRepository.save(profile);
                     return true;
                 })
@@ -154,7 +159,7 @@ public class ProfileService {
         return toDTO(currentProfile);
     }
 
-    // ── NEW: Update full name only ────────────────────────────────────
+    // ── Update full name only ─────────────────────────────────────────
     public ProfileDTO updateName(String fullName) {
         if (fullName == null || fullName.trim().isEmpty()) {
             throw new ValidationException("fullName", "Full name cannot be empty");
@@ -165,7 +170,7 @@ public class ProfileService {
         return toDTO(currentProfile);
     }
 
-    // ── NEW: Change password ──────────────────────────────────────────
+    // ── Change password ───────────────────────────────────────────────
     public void changePassword(String oldPassword, String newPassword) {
         if (oldPassword == null || oldPassword.trim().isEmpty()) {
             throw new ValidationException("oldPassword", "Current password is required");
@@ -174,9 +179,10 @@ public class ProfileService {
             throw new ValidationException("newPassword", "New password must be at least 6 characters");
         }
         ProfileEntity currentProfile = getCurrentProfile();
-        // Verify old password matches
+        // Use ValidationException (400) not BadCredentialsException (401)
+        // so the frontend receives a proper readable error message
         if (!passwordEncoder.matches(oldPassword, currentProfile.getPassword())) {
-            throw new BadCredentialsException("Current password is incorrect");
+            throw new ValidationException("oldPassword", "Current password is incorrect");
         }
         currentProfile.setPassword(passwordEncoder.encode(newPassword));
         profileRepository.save(currentProfile);
@@ -201,7 +207,7 @@ public class ProfileService {
                     new UsernamePasswordAuthenticationToken(normalizedEmail, authDTO.getPassword())
             );
         } catch (BadCredentialsException e) {
-            throw new BadCredentialsException("Incorrect password. Please try again.");
+            throw new UnauthorizedException("Incorrect password. Please try again.");
         }
         ProfileEntity profile = profileRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
