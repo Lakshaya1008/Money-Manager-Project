@@ -20,6 +20,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -37,6 +38,7 @@ public class ProfileService {
     @Value("${app.activation.url}")
     private String activationURL;
 
+    // ── Register ──────────────────────────────────────────────────────
     public ProfileDTO registerProfile(ProfileDTO profileDTO) {
         if (profileDTO.getEmail() == null || profileDTO.getEmail().trim().isEmpty()) {
             throw new ValidationException("email", "Email is required");
@@ -64,44 +66,95 @@ public class ProfileService {
 
         try {
             String activationLink = activationURL + "/activate?token=" + newProfile.getActivationToken();
-            String subject = "Activate your Money Manager account";
-            String body = "Click on the following link to activate your account: " + activationLink;
-            emailService.sendEmail(newProfile.getEmail(), subject, body);
+            emailService.sendEmail(newProfile.getEmail(),
+                    "Activate your Money Manager account",
+                    "Click on the following link to activate your account: " + activationLink);
         } catch (Exception emailEx) {
-            // Email failure must NOT prevent registration - profile is already saved
+            // Email failure must NOT prevent registration — profile is already saved
             System.err.println("Warning: Failed to send activation email to " + newProfile.getEmail() + ": " + emailEx.getMessage());
         }
 
         return toDTO(newProfile);
     }
 
-    private boolean isValidEmail(String email) {
-        return email != null && email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    // ── Forgot password — send reset link email ────────────────────────
+    public void forgotPassword(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new ValidationException("email", "Email is required");
+        }
+        String normalizedEmail = email.toLowerCase().trim();
+
+        // Silently do nothing if email not found — prevents email enumeration attack
+        profileRepository.findByEmail(normalizedEmail).ifPresent(profile -> {
+            String token = UUID.randomUUID().toString();
+            profile.setResetPasswordToken(token);
+            profile.setResetPasswordTokenExpiry(LocalDateTime.now().plusHours(1)); // expires in 1 hour
+            profileRepository.save(profile);
+
+            String resetLink = activationURL + "/reset-password?token=" + token;
+            try {
+                emailService.sendEmail(normalizedEmail,
+                        "Reset your Money Manager password",
+                        "Click the following link to reset your password (valid for 1 hour):\n\n" + resetLink +
+                                "\n\nIf you did not request this, please ignore this email.");
+            } catch (Exception e) {
+                System.err.println("Warning: Failed to send reset email to " + normalizedEmail + ": " + e.getMessage());
+            }
+        });
     }
 
-    public ProfileEntity toEntity(ProfileDTO profileDTO) {
-        return ProfileEntity.builder()
-                .id(profileDTO.getId())
-                .fullName(profileDTO.getFullName())
-                .email(profileDTO.getEmail())
-                .password(passwordEncoder.encode(profileDTO.getPassword()))
-                .profileImageUrl(profileDTO.getProfileImageUrl())
-                .createdAt(profileDTO.getCreatedAt())
-                .updatedAt(profileDTO.getUpdatedAt())
-                .build();
+    // ── Reset password — verify token and set new password ────────────
+    public void resetPassword(String token, String newPassword) {
+        if (token == null || token.trim().isEmpty()) {
+            throw new ValidationException("token", "Reset token is required");
+        }
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new ValidationException("newPassword", "Password must be at least 6 characters");
+        }
+
+        ProfileEntity profile = profileRepository.findByResetPasswordToken(token)
+                .orElseThrow(() -> new ValidationException("token", "Invalid or expired reset link. Please request a new one."));
+
+        // Check token expiry
+        if (profile.getResetPasswordTokenExpiry() == null ||
+                LocalDateTime.now().isAfter(profile.getResetPasswordTokenExpiry())) {
+            throw new ValidationException("token", "This reset link has expired. Please request a new one.");
+        }
+
+        profile.setPassword(passwordEncoder.encode(newPassword));
+        profile.setResetPasswordToken(null);        // clear token after use
+        profile.setResetPasswordTokenExpiry(null);
+        profileRepository.save(profile);
     }
 
-    public ProfileDTO toDTO(ProfileEntity profileEntity) {
-        return ProfileDTO.builder()
-                .id(profileEntity.getId())
-                .fullName(profileEntity.getFullName())
-                .email(profileEntity.getEmail())
-                .profileImageUrl(profileEntity.getProfileImageUrl())
-                .createdAt(profileEntity.getCreatedAt())
-                .updatedAt(profileEntity.getUpdatedAt())
-                .build();
+    // ── Update name only ───────────────────────────────────────────────
+    public ProfileDTO updateName(String fullName) {
+        if (fullName == null || fullName.trim().isEmpty()) {
+            throw new ValidationException("fullName", "Full name cannot be empty");
+        }
+        ProfileEntity currentProfile = getCurrentProfile();
+        currentProfile.setFullName(fullName.trim());
+        currentProfile = profileRepository.save(currentProfile);
+        return toDTO(currentProfile);
     }
 
+    // ── Change password (logged in) ────────────────────────────────────
+    public void changePassword(String oldPassword, String newPassword) {
+        if (oldPassword == null || oldPassword.trim().isEmpty()) {
+            throw new ValidationException("oldPassword", "Current password is required");
+        }
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new ValidationException("newPassword", "New password must be at least 6 characters");
+        }
+        ProfileEntity currentProfile = getCurrentProfile();
+        if (!passwordEncoder.matches(oldPassword, currentProfile.getPassword())) {
+            throw new ValidationException("oldPassword", "Current password is incorrect");
+        }
+        currentProfile.setPassword(passwordEncoder.encode(newPassword));
+        profileRepository.save(currentProfile);
+    }
+
+    // ── Activate account ───────────────────────────────────────────────
     public boolean activateProfile(String activationToken) {
         return profileRepository.findByActivationToken(activationToken)
                 .map(profile -> {
@@ -113,6 +166,7 @@ public class ProfileService {
                 .orElse(false);
     }
 
+    // ── Auth helpers ───────────────────────────────────────────────────
     public boolean isAccountActive(String email) {
         return profileRepository.findByEmail(email)
                 .map(ProfileEntity::getIsActive)
@@ -137,14 +191,7 @@ public class ProfileService {
             currentUser = profileRepository.findByEmail(email)
                     .orElseThrow(() -> new UsernameNotFoundException("Profile not found with email: " + email));
         }
-        return ProfileDTO.builder()
-                .id(currentUser.getId())
-                .fullName(currentUser.getFullName())
-                .email(currentUser.getEmail())
-                .profileImageUrl(currentUser.getProfileImageUrl())
-                .createdAt(currentUser.getCreatedAt())
-                .updatedAt(currentUser.getUpdatedAt())
-                .build();
+        return toDTO(currentUser);
     }
 
     public ProfileDTO updateProfile(ProfileDTO profileDTO) {
@@ -157,35 +204,6 @@ public class ProfileService {
         }
         currentProfile = profileRepository.save(currentProfile);
         return toDTO(currentProfile);
-    }
-
-    // ── Update full name only ─────────────────────────────────────────
-    public ProfileDTO updateName(String fullName) {
-        if (fullName == null || fullName.trim().isEmpty()) {
-            throw new ValidationException("fullName", "Full name cannot be empty");
-        }
-        ProfileEntity currentProfile = getCurrentProfile();
-        currentProfile.setFullName(fullName.trim());
-        currentProfile = profileRepository.save(currentProfile);
-        return toDTO(currentProfile);
-    }
-
-    // ── Change password ───────────────────────────────────────────────
-    public void changePassword(String oldPassword, String newPassword) {
-        if (oldPassword == null || oldPassword.trim().isEmpty()) {
-            throw new ValidationException("oldPassword", "Current password is required");
-        }
-        if (newPassword == null || newPassword.length() < 6) {
-            throw new ValidationException("newPassword", "New password must be at least 6 characters");
-        }
-        ProfileEntity currentProfile = getCurrentProfile();
-        // Use ValidationException (400) not BadCredentialsException (401)
-        // so the frontend receives a proper readable error message
-        if (!passwordEncoder.matches(oldPassword, currentProfile.getPassword())) {
-            throw new ValidationException("oldPassword", "Current password is incorrect");
-        }
-        currentProfile.setPassword(passwordEncoder.encode(newPassword));
-        profileRepository.save(currentProfile);
     }
 
     public Map<String, Object> authenticateAndGenerateToken(AuthDTO authDTO) {
@@ -221,5 +239,33 @@ public class ProfileService {
         response.put("createdAt", profile.getCreatedAt());
         response.put("updatedAt", profile.getUpdatedAt());
         return response;
+    }
+
+    // ── Entity helpers ─────────────────────────────────────────────────
+    private boolean isValidEmail(String email) {
+        return email != null && email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    }
+
+    public ProfileEntity toEntity(ProfileDTO profileDTO) {
+        return ProfileEntity.builder()
+                .id(profileDTO.getId())
+                .fullName(profileDTO.getFullName())
+                .email(profileDTO.getEmail())
+                .password(passwordEncoder.encode(profileDTO.getPassword()))
+                .profileImageUrl(profileDTO.getProfileImageUrl())
+                .createdAt(profileDTO.getCreatedAt())
+                .updatedAt(profileDTO.getUpdatedAt())
+                .build();
+    }
+
+    public ProfileDTO toDTO(ProfileEntity profileEntity) {
+        return ProfileDTO.builder()
+                .id(profileEntity.getId())
+                .fullName(profileEntity.getFullName())
+                .email(profileEntity.getEmail())
+                .profileImageUrl(profileEntity.getProfileImageUrl())
+                .createdAt(profileEntity.getCreatedAt())
+                .updatedAt(profileEntity.getUpdatedAt())
+                .build();
     }
 }

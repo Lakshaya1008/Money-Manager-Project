@@ -22,8 +22,7 @@ public class ProfileController {
 
     @PostMapping("/register")
     public ResponseEntity<ProfileDTO> registerProfile(@RequestBody ProfileDTO profileDTO) {
-        ProfileDTO registeredProfile = profileService.registerProfile(profileDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(registeredProfile);
+        return ResponseEntity.status(HttpStatus.CREATED).body(profileService.registerProfile(profileDTO));
     }
 
     @GetMapping("/activate")
@@ -36,45 +35,57 @@ public class ProfileController {
             response.put("message", "Profile activated successfully. You can now login to your account.");
             return ResponseEntity.ok(response);
         } else {
-            throw new ResourceNotFoundException("Activation token not found or already used. Please request a new activation email.");
+            throw new ResourceNotFoundException("Activation token not found or already used.");
         }
     }
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody AuthDTO authDTO) {
-        Map<String, Object> response = profileService.authenticateAndGenerateToken(authDTO);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(profileService.authenticateAndGenerateToken(authDTO));
     }
 
     @GetMapping("/profile")
     public ResponseEntity<ProfileDTO> getPublicProfile() {
-        ProfileDTO profileDTO = profileService.getPublicProfile(null);
-        return ResponseEntity.ok(profileDTO);
+        return ResponseEntity.ok(profileService.getPublicProfile(null));
     }
 
     @PutMapping("/profile")
     public ResponseEntity<ProfileDTO> updateProfile(@RequestBody ProfileDTO profileDTO) {
-        ProfileDTO updatedProfile = profileService.updateProfile(profileDTO);
-        return ResponseEntity.ok(updatedProfile);
+        return ResponseEntity.ok(profileService.updateProfile(profileDTO));
     }
 
-    // ── NEW: Update name only ─────────────────────────────────────────
     @PutMapping("/profile/update-name")
     public ResponseEntity<ProfileDTO> updateName(@RequestBody Map<String, String> body) {
-        String fullName = body.get("fullName");
-        ProfileDTO updatedProfile = profileService.updateName(fullName);
-        return ResponseEntity.ok(updatedProfile);
+        return ResponseEntity.ok(profileService.updateName(body.get("fullName")));
     }
 
-    // ── NEW: Change password ──────────────────────────────────────────
     @PutMapping("/profile/change-password")
     public ResponseEntity<Map<String, Object>> changePassword(@RequestBody Map<String, String> body) {
-        String oldPassword = body.get("oldPassword");
-        String newPassword = body.get("newPassword");
-        profileService.changePassword(oldPassword, newPassword);
+        profileService.changePassword(body.get("oldPassword"), body.get("newPassword"));
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("timestamp", LocalDateTime.now().toString());
         response.put("message", "Password changed successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    // ── NEW: Forgot password — sends reset link email ─────────────────
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, Object>> forgotPassword(@RequestBody Map<String, String> body) {
+        profileService.forgotPassword(body.get("email"));
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("timestamp", LocalDateTime.now().toString());
+        // Always return success — prevents email enumeration (don't reveal if email exists)
+        response.put("message", "If an account with that email exists, a reset link has been sent.");
+        return ResponseEntity.ok(response);
+    }
+
+    // ── NEW: Reset password — verifies token and sets new password ─────
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, Object>> resetPassword(@RequestBody Map<String, String> body) {
+        profileService.resetPassword(body.get("token"), body.get("newPassword"));
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("timestamp", LocalDateTime.now().toString());
+        response.put("message", "Password reset successfully. You can now login with your new password.");
         return ResponseEntity.ok(response);
     }
 }

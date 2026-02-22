@@ -1,8 +1,8 @@
 package in.bushansirgur.moneymanager.config;
 
+import in.bushansirgur.moneymanager.service.AppUserDetailsService;
 import in.bushansirgur.moneymanager.security.JwtAuthenticationEntryPoint;
 import in.bushansirgur.moneymanager.security.JwtRequestFilter;
-import in.bushansirgur.moneymanager.service.AppUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -12,6 +12,7 @@ import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -26,6 +27,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @Configuration
+@EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -40,11 +42,20 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/status", "/health", "/register", "/activate", "/login").permitAll()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/status",
+                                "/health",
+                                "/register",
+                                "/activate",
+                                "/login",
+                                "/forgot-password",
+                                "/reset-password"
+                        ).permitAll()
                         .anyRequest().authenticated())
-                        .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
-                        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                        .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
         return httpSecurity.build();
     }
 
