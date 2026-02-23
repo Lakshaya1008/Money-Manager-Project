@@ -14,7 +14,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1.0")
 @RequiredArgsConstructor
 public class ProfileController {
 
