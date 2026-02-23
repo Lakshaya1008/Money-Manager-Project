@@ -11,6 +11,7 @@
   <img src="https://img.shields.io/badge/Java-21-orange?style=for-the-badge&logo=openjdk" alt="Java 21" />
   <img src="https://img.shields.io/badge/Spring%20Boot-3.5.3-green?style=for-the-badge&logo=springboot" alt="Spring Boot" />
   <img src="https://img.shields.io/badge/PostgreSQL-15+-blue?style=for-the-badge&logo=postgresql" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/Deployed%20on-Render-46E3B7?style=for-the-badge&logo=render" alt="Render" />
   <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker" alt="Docker" />
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License" />
 </p>
@@ -40,6 +41,7 @@ Money Manager is a comprehensive personal finance management system that helps u
 - Visualize financial data through a dashboard
 - Export reports to Excel
 - Receive daily email summaries and reminders
+- Reset passwords securely via email
 
 The API is designed with security, scalability, and clean architecture principles in mind.
 
@@ -49,15 +51,16 @@ The API is designed with security, scalability, and clean architecture principle
 
 | Feature | Description |
 |---------|-------------|
-| 🔐 **Authentication** | JWT-based stateless authentication with email verification |
+| 🔐 **Authentication** | JWT-based stateless auth with email account activation |
 | 💵 **Income Tracking** | Record, categorize, and analyze all income sources |
 | 💳 **Expense Management** | Track expenses with custom categories and icons |
-| 📁 **Custom Categories** | Create personalized INCOME/EXPENSE categories |
+| 📁 **Custom Categories** | Create personalized `INCOME` / `EXPENSE` categories |
 | 📊 **Dashboard** | Real-time financial overview with recent transactions |
 | 🔍 **Advanced Filtering** | Filter by date range, keyword, with sorting options |
-| 📧 **Email Reports** | Send Excel reports directly to your inbox |
-| 📥 **Excel Export** | Download financial data as Excel spreadsheets |
-| ⏰ **Daily Reminders** | Automated email notifications (configurable) |
+| 📧 **Email Reports** | Send Excel reports directly to your inbox via Brevo |
+| 📥 **Excel Export** | Download financial data as `.xlsx` spreadsheets |
+| ⏰ **Daily Reminders** | Automated email notifications at 10 PM & 11 PM IST |
+| 🔑 **Password Reset** | Secure forgot/reset password flow via email token |
 | 🐳 **Docker Ready** | Production-hardened containerization |
 
 ---
@@ -90,13 +93,16 @@ The API is designed with security, scalability, and clean architecture principle
 |------------|---------|
 | Apache POI 5.2.5 | Excel file generation |
 | Lombok | Boilerplate reduction |
-| Jakarta Mail | Email services |
+| Brevo HTTP API | Transactional email delivery |
 
 ### DevOps
 | Technology | Purpose |
 |------------|---------|
 | Maven | Build automation |
 | Docker | Containerization |
+| Render | Cloud deployment |
+
+> **Note on Email:** This project uses the **Brevo HTTP API** (not SMTP) because Render's free tier blocks outbound SMTP port 587. All transactional emails go through Brevo's REST API.
 
 ---
 
@@ -113,7 +119,7 @@ The API is designed with security, scalability, and clean architecture principle
 │                        SECURITY LAYER                              │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌────────────────┐   │
 │  │  CORS Filter     │→ │  JWT Filter      │→ │  Auth Entry    │   │
-│  │  (Configurable)  │  │  (Token Valid)   │  │  Point         │   │
+│  │  (Configurable)  │  │  (Token Valid.)  │  │  Point         │   │
 │  └──────────────────┘  └──────────────────┘  └────────────────┘   │
 └────────────────────────────────────────────────────────────────────┘
                                   │
@@ -146,7 +152,7 @@ The API is designed with security, scalability, and clean architecture principle
                                   ▼
 ┌────────────────────────────────────────────────────────────────────┐
 │                      POSTGRESQL DATABASE                           │
-│    tbl_profiles │ tbl_categories │ tbl_incomes │ tbl_expenses     │
+│       profile │ tbl_categories │ tbl_incomes │ tbl_expenses        │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -171,25 +177,14 @@ cd money-manager/Backend/moneymanager
 ### 2️⃣ Create Database
 
 ```sql
--- Connect to PostgreSQL and run:
 CREATE DATABASE moneymanager;
 CREATE USER moneymanager_user WITH ENCRYPTED PASSWORD 'your_secure_password';
 GRANT ALL PRIVILEGES ON DATABASE moneymanager TO moneymanager_user;
-
--- Connect to the new database and grant schema permissions:
 \c moneymanager
 GRANT ALL ON SCHEMA public TO moneymanager_user;
 ```
 
 ### 3️⃣ Configure Environment Variables
-
-**Option A: Using .env file (Recommended)**
-```bash
-cp .env.example .env
-# Edit .env with your values
-```
-
-**Option B: Export directly**
 
 <details>
 <summary>🐧 Linux / macOS</summary>
@@ -199,11 +194,8 @@ export DATABASE_URL=jdbc:postgresql://localhost:5432/moneymanager
 export DATABASE_USERNAME=moneymanager_user
 export DATABASE_PASSWORD=your_secure_password
 export JWT_SECRET=$(openssl rand -base64 32)
-export MAIL_HOST=smtp.gmail.com
-export MAIL_PORT=587
-export MAIL_USERNAME=your_email@gmail.com
-export MAIL_PASSWORD=your_app_password
-export MAIL_FROM=noreply@moneymanager.app
+export BREVO_API_KEY=xkeysib-your-brevo-api-key
+export BREVO_SENDER_EMAIL=noreply@yourdomain.com
 export CORS_ALLOWED_ORIGINS=http://localhost:5173
 export FRONTEND_URL=http://localhost:5173
 export ACTIVATION_BASE_URL=http://localhost:8081
@@ -217,12 +209,9 @@ export ACTIVATION_BASE_URL=http://localhost:8081
 $env:DATABASE_URL="jdbc:postgresql://localhost:5432/moneymanager"
 $env:DATABASE_USERNAME="moneymanager_user"
 $env:DATABASE_PASSWORD="your_secure_password"
-$env:JWT_SECRET="your_32_character_or_longer_secret_key_here"
-$env:MAIL_HOST="smtp.gmail.com"
-$env:MAIL_PORT="587"
-$env:MAIL_USERNAME="your_email@gmail.com"
-$env:MAIL_PASSWORD="your_app_password"
-$env:MAIL_FROM="noreply@moneymanager.app"
+$env:JWT_SECRET="your-32-character-or-longer-secret-key"
+$env:BREVO_API_KEY="xkeysib-your-brevo-api-key"
+$env:BREVO_SENDER_EMAIL="noreply@yourdomain.com"
 $env:CORS_ALLOWED_ORIGINS="http://localhost:5173"
 $env:FRONTEND_URL="http://localhost:5173"
 $env:ACTIVATION_BASE_URL="http://localhost:8081"
@@ -232,10 +221,7 @@ $env:ACTIVATION_BASE_URL="http://localhost:8081"
 ### 4️⃣ Build and Run
 
 ```bash
-# Build the project
 ./mvnw clean install -DskipTests
-
-# Run the application
 ./mvnw spring-boot:run
 ```
 
@@ -243,7 +229,7 @@ $env:ACTIVATION_BASE_URL="http://localhost:8081"
 
 ```bash
 curl http://localhost:8081/api/v1.0/health
-# Expected response: "Application is running"
+# Expected: "Application is running"
 ```
 
 🎉 **The API is now running at `http://localhost:8081/api/v1.0`**
@@ -255,26 +241,26 @@ curl http://localhost:8081/api/v1.0/health
 | Variable | Required | Default | Description |
 |----------|:--------:|---------|-------------|
 | **Database** ||||
-| `DATABASE_URL` | ✅ | - | PostgreSQL JDBC connection URL |
-| `DATABASE_USERNAME` | ✅ | - | Database username |
-| `DATABASE_PASSWORD` | ✅ | - | Database password |
+| `DATABASE_URL` | ✅ | — | PostgreSQL JDBC connection URL |
+| `DATABASE_USERNAME` | ✅ | — | Database username |
+| `DATABASE_PASSWORD` | ✅ | — | Database password |
 | `DB_POOL_SIZE` | ❌ | `10` | Maximum connection pool size |
 | `DB_MIN_IDLE` | ❌ | `5` | Minimum idle connections |
+| `JPA_DDL_AUTO` | ❌ | `validate` | Hibernate schema mode — use `validate` in production |
 | **JWT** ||||
-| `JWT_SECRET` | ✅ | - | Secret key (min 32 chars, use `openssl rand -base64 32`) |
+| `JWT_SECRET` | ✅ | — | Signing secret (min 32 chars). Generate: `openssl rand -base64 32` |
 | `JWT_EXPIRATION_HOURS` | ❌ | `10` | Token validity in hours |
-| **Email (SMTP)** ||||
-| `MAIL_HOST` | ✅ | - | SMTP server (e.g., `smtp.gmail.com`) |
-| `MAIL_PORT` | ❌ | `587` | SMTP port |
-| `MAIL_USERNAME` | ✅ | - | SMTP username/email |
-| `MAIL_PASSWORD` | ✅ | - | SMTP password or app password |
-| `MAIL_FROM` | ✅ | - | Sender email address |
-| **Application** ||||
+| **Email — Brevo HTTP API** ||||
+| `BREVO_API_KEY` | ✅ | — | Brevo API key (`xkeysib-...`) from your Brevo dashboard |
+| `BREVO_SENDER_EMAIL` | ✅ | — | Verified sender email in Brevo |
+| `BREVO_SENDER_NAME` | ❌ | `Money Manager` | Display name on outgoing emails |
+| `EMAIL_USE_API` | ❌ | `true` (prod) | Must be `true` on Render (SMTP port 587 is blocked) |
+| **Application URLs** ||||
+| `CORS_ALLOWED_ORIGINS` | ✅ | — | Comma-separated frontend origins (e.g. `https://yourapp.com`) |
+| `FRONTEND_URL` | ✅ | — | Frontend URL used in notification email links |
+| `ACTIVATION_BASE_URL` | ✅ | — | Base URL for account activation and password reset links |
+| **Server** ||||
 | `SERVER_PORT` | ❌ | `8081` | Application port |
-| `CORS_ALLOWED_ORIGINS` | ✅ | - | Comma-separated allowed origins |
-| `FRONTEND_URL` | ✅ | - | Frontend app URL (for email links) |
-| `ACTIVATION_BASE_URL` | ✅ | - | Backend URL (for activation links) |
-| **Logging** ||||
 | `LOG_LEVEL_ROOT` | ❌ | `INFO` | Root logging level |
 | `LOG_LEVEL_APP` | ❌ | `INFO` | Application logging level |
 
@@ -282,43 +268,51 @@ curl http://localhost:8081/api/v1.0/health
 
 ## 📚 API Reference
 
-**Base URL:** `http://localhost:8081/api/v1.0`
+**Base URL:** `https://your-api.render.com/api/v1.0`
 
-### Authentication Endpoints
-
-| Method | Endpoint | Auth | Description |
-|:------:|----------|:----:|-------------|
-| `GET` | `/health` | ❌ | Health check |
-| `POST` | `/register` | ❌ | Register new user |
-| `GET` | `/activate?token=xxx` | ❌ | Activate account |
-| `POST` | `/login` | ❌ | Login & get JWT |
-
-### Protected Endpoints (Require JWT)
+### Public Endpoints (no token required)
 
 | Method | Endpoint | Description |
 |:------:|----------|-------------|
+| `GET` | `/health` | Health check |
+| `GET` | `/status` | Status check |
+| `POST` | `/register` | Register a new account |
+| `GET` | `/activate?token=xxx` | Activate account via email link |
+| `POST` | `/login` | Login and receive JWT token |
+| `POST` | `/forgot-password` | Send password reset email |
+| `POST` | `/reset-password` | Reset password using token |
+
+### Protected Endpoints (Bearer token required)
+
+| Method | Endpoint | Description |
+|:------:|----------|-------------|
+| **Profile** |||
 | `GET` | `/profile` | Get current user profile |
-| **Categories** ||
-| `POST` | `/categories` | Create category |
+| `PUT` | `/profile` | Update profile |
+| `PUT` | `/profile/update-name` | Update display name |
+| `PUT` | `/profile/change-password` | Change password |
+| **Categories** |||
 | `GET` | `/categories` | Get all categories |
-| `GET` | `/categories/{type}` | Get by type (INCOME/EXPENSE) |
+| `GET` | `/categories/{type}` | Get by type (`INCOME` or `EXPENSE`) |
+| `POST` | `/categories` | Create category |
 | `PUT` | `/categories/{id}` | Update category |
 | `DELETE` | `/categories/{id}` | Delete category |
-| **Income** ||
-| `POST` | `/incomes` | Add income |
+| **Income** |||
 | `GET` | `/incomes` | Get current month incomes |
+| `POST` | `/incomes` | Add income |
 | `DELETE` | `/incomes/{id}` | Delete income |
-| **Expenses** ||
-| `POST` | `/expenses` | Add expense |
+| **Expenses** |||
 | `GET` | `/expenses` | Get current month expenses |
+| `POST` | `/expenses` | Add expense |
 | `DELETE` | `/expenses/{id}` | Delete expense |
-| **Dashboard & Reports** ||
-| `GET` | `/dashboard` | Get financial overview |
-| `POST` | `/filter` | Filter transactions |
-| `GET` | `/excel/download/income` | Download income Excel |
-| `GET` | `/excel/download/expense` | Download expense Excel |
-| `GET` | `/email/income-excel` | Email income report |
-| `GET` | `/email/expense-excel` | Email expense report |
+| **Dashboard & Reports** |||
+| `GET` | `/dashboard` | Total balance, income, expenses + recent transactions |
+| `POST` | `/filter` | Filter transactions by date, keyword, sort |
+| `GET` | `/excel/download/income` | Download income as `.xlsx` |
+| `GET` | `/excel/download/expense` | Download expenses as `.xlsx` |
+| `GET` | `/email/income-excel` | Email income report to logged-in user |
+| `GET` | `/email/expense-excel` | Email expense report to logged-in user |
+| `GET` | `/email/test` | Send a test email |
 
 ### Example Requests
 
@@ -326,7 +320,7 @@ curl http://localhost:8081/api/v1.0/health
 <summary>📝 Register User</summary>
 
 ```bash
-curl -X POST http://localhost:8081/api/v1.0/register \
+curl -X POST https://your-api.render.com/api/v1.0/register \
   -H "Content-Type: application/json" \
   -d '{
     "fullName": "John Doe",
@@ -340,7 +334,7 @@ curl -X POST http://localhost:8081/api/v1.0/register \
 <summary>🔑 Login</summary>
 
 ```bash
-curl -X POST http://localhost:8081/api/v1.0/login \
+curl -X POST https://your-api.render.com/api/v1.0/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "john@example.com",
@@ -352,27 +346,28 @@ curl -X POST http://localhost:8081/api/v1.0/login \
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIs...",
-  "user": {
-    "id": 1,
-    "fullName": "John Doe",
-    "email": "john@example.com"
-  }
+  "id": 1,
+  "fullName": "John Doe",
+  "email": "john@example.com",
+  "profileImageUrl": null,
+  "createdAt": "2026-01-01T10:00:00",
+  "updatedAt": "2026-01-01T10:00:00"
 }
 ```
 </details>
 
 <details>
-<summary>💵 Add Income (Authenticated)</summary>
+<summary>💵 Add Income</summary>
 
 ```bash
-curl -X POST http://localhost:8081/api/v1.0/incomes \
+curl -X POST https://your-api.render.com/api/v1.0/incomes \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
     "name": "Monthly Salary",
     "amount": 5000.00,
     "categoryId": 1,
-    "date": "2026-02-14",
+    "date": "2026-02-01",
     "icon": "💰"
   }'
 ```
@@ -382,21 +377,33 @@ curl -X POST http://localhost:8081/api/v1.0/incomes \
 <summary>🔍 Filter Transactions</summary>
 
 ```bash
-curl -X POST http://localhost:8081/api/v1.0/filter \
+curl -X POST https://your-api.render.com/api/v1.0/filter \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
     "type": "expense",
     "startDate": "2026-01-01",
-    "endDate": "2026-02-14",
-    "keyword": "grocery",
+    "endDate": "2026-01-31",
+    "keyword": "food",
     "sortField": "amount",
     "sortOrder": "desc"
   }'
 ```
 </details>
 
-> 📖 **Full API Documentation:** See [API_CONTRACT.md](postman/API_CONTRACT.md) for complete request/response examples.
+### Error Response Format
+
+All errors follow a consistent structure:
+
+```json
+{
+  "timestamp": "2026-01-01T10:00:00",
+  "status": 400,
+  "error": "Bad Request",
+  "errorCode": "VALIDATION_ERROR",
+  "message": "Validation failed for field 'email': Email is required"
+}
+```
 
 ---
 
@@ -418,11 +425,9 @@ docker run -d \
   -e DATABASE_USERNAME=your_username \
   -e DATABASE_PASSWORD=your_password \
   -e JWT_SECRET=your_32_char_secret_key_here \
-  -e MAIL_HOST=smtp.gmail.com \
-  -e MAIL_PORT=587 \
-  -e MAIL_USERNAME=your_email@gmail.com \
-  -e MAIL_PASSWORD=your_app_password \
-  -e MAIL_FROM=noreply@yourapp.com \
+  -e BREVO_API_KEY=xkeysib-your-api-key \
+  -e BREVO_SENDER_EMAIL=noreply@yourapp.com \
+  -e EMAIL_USE_API=true \
   -e CORS_ALLOWED_ORIGINS=https://your-frontend.com \
   -e FRONTEND_URL=https://your-frontend.com \
   -e ACTIVATION_BASE_URL=https://api.your-domain.com \
@@ -445,21 +450,12 @@ docker run -d \
 # Check container status
 docker ps
 
-# Check health status
+# Check health
 docker inspect --format='{{.State.Health.Status}}' money-manager
 
 # View logs
 docker logs -f money-manager
 ```
-
-### Docker Features
-
-- ✅ Multi-stage build (optimized image size)
-- ✅ Alpine-based JRE (minimal attack surface)
-- ✅ Non-root user (security best practice)
-- ✅ Built-in health checks
-- ✅ JVM container optimizations
-- ✅ Production profile auto-activated
 
 ---
 
@@ -467,73 +463,66 @@ docker logs -f money-manager
 
 ```
 moneymanager/
-├── 📂 src/
-│   ├── 📂 main/
-│   │   ├── 📂 java/in/bushansirgur/moneymanager/
-│   │   │   ├── 📄 MoneymanagerApplication.java    # Entry point
-│   │   │   ├── 📂 config/                         # Configuration
-│   │   │   │   ├── SecurityConfig.java            # Security settings
-│   │   │   │   ├── GlobalExceptionHandler.java    # Error handling
-│   │   │   │   └── ...
-│   │   │   ├── 📂 controller/                     # REST endpoints
-│   │   │   │   ├── ProfileController.java         # Auth endpoints
+├── src/
+│   ├── main/
+│   │   ├── java/in/bushansirgur/moneymanager/
+│   │   │   ├── MoneymanagerApplication.java    # Entry point
+│   │   │   ├── config/
+│   │   │   │   ├── SecurityConfig.java         # CORS, JWT filter chain
+│   │   │   │   ├── GlobalExceptionHandler.java # Unified error responses
+│   │   │   │   └── FlexibleLocalDateTimeDeserializer.java
+│   │   │   ├── controller/                     # REST endpoints
+│   │   │   │   ├── ProfileController.java      # Auth & profile
 │   │   │   │   ├── IncomeController.java
 │   │   │   │   ├── ExpenseController.java
 │   │   │   │   ├── CategoryController.java
 │   │   │   │   ├── DashboardController.java
-│   │   │   │   └── ...
-│   │   │   ├── 📂 dto/                            # Data Transfer Objects
-│   │   │   ├── 📂 entity/                         # JPA Entities
-│   │   │   ├── 📂 exception/                      # Custom exceptions
-│   │   │   ├── 📂 repository/                     # Data access layer
-│   │   │   ├── 📂 security/                       # JWT components
-│   │   │   ├── 📂 service/                        # Business logic
-│   │   │   └── 📂 util/                           # Utilities
-│   │   └── 📂 resources/
-│   │       ├── 📄 application.properties          # Base config
-│   │       └── 📄 application-prod.properties     # Production config
-│   └── 📂 test/                                   # Unit tests
-├── 📄 Dockerfile                                  # Container config
-├── 📄 .env.example                                # Environment template
-├── 📄 .dockerignore                               # Docker ignore rules
-├── 📄 .gitignore                                  # Git ignore rules
-├── 📄 pom.xml                                     # Maven config
-├── 📄 API_CONTRACT.md                             # API documentation
-└── 📄 README.md                                   # This file
+│   │   │   │   ├── FilterController.java
+│   │   │   │   ├── EmailController.java
+│   │   │   │   └── ExcelController.java
+│   │   │   ├── service/                        # Business logic
+│   │   │   ├── repository/                     # DB queries (Spring Data JPA)
+│   │   │   ├── entity/                         # JPA table mappings
+│   │   │   ├── dto/                            # Request / response shapes
+│   │   │   ├── exception/                      # Custom exception classes
+│   │   │   ├── security/                       # JWT filter, auth entry point
+│   │   │   └── util/                           # JwtUtil
+│   │   └── resources/
+│   │       ├── application.properties          # Base config
+│   │       └── application-prod.properties     # Production overrides
+│   └── test/                                   # Unit tests
+├── Dockerfile
+├── pom.xml
+└── README.md
 ```
 
 ---
 
 ## 🔒 Security
 
-### Implemented Security Measures
+### Implemented Measures
 
 | Measure | Implementation |
 |---------|----------------|
-| 🔑 Authentication | JWT tokens (stateless) |
-| 🔐 Password Storage | BCrypt hashing |
-| 🌐 CORS | Configurable origin whitelist |
-| 🛡️ SQL Injection | Parameterized queries (JPA) |
-| 📝 Input Validation | Server-side validation |
-| 🚫 Error Exposure | Generic messages in production |
-| 👤 Container Security | Non-root user in Docker |
+| 🔑 Authentication | JWT tokens (stateless, no server-side sessions) |
+| 🔐 Password Storage | BCrypt hashing — never stored or returned in plain text |
+| 🌐 CORS | Configurable allowed origins whitelist |
+| 🛡️ SQL Injection | Prevented by parameterized JPA queries |
+| 📝 Input Validation | Server-side validation on all inputs |
+| 🚫 Error Exposure | Generic messages — no stack traces in production |
+| 👤 Data Isolation | All queries scoped to the authenticated user's ID |
+| 📧 Email Enumeration | Forgot-password never reveals if an email exists |
+| ✅ Account Activation | Users must verify email before login is allowed |
 
-### Security Recommendations
+### Recommendations
 
-1. **Generate strong JWT secret:**
+1. **Generate a strong JWT secret:**
    ```bash
    openssl rand -base64 32
    ```
-
-2. **Use HTTPS in production** (terminate SSL at reverse proxy)
-
-3. **Never commit secrets** - use environment variables
-
-4. **Rotate credentials regularly**
-
-5. **Use `validate` DDL mode** in production
-
-6. **Enable rate limiting** at reverse proxy level
+2. **Use HTTPS in production** — terminate SSL at your reverse proxy or Render
+3. **Never commit secrets** — use environment variables or a secrets manager
+4. **Keep `JPA_DDL_AUTO=validate`** in production to prevent accidental schema changes
 
 ---
 
@@ -549,7 +538,7 @@ moneymanager/
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
 ---
 
