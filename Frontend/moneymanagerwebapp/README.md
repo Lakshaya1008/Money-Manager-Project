@@ -173,74 +173,10 @@ npm install
 
 # Start development server
 npm run dev
-```
 
-App runs at `http://localhost:5173`
+Production Build
+# Build for production
+npm run build
 
-### Environment Variables
-
-Create `.env.development` in the project root:
-
-```env
-VITE_API_BASE_URL=http://localhost:8081/api/v1.0
-VITE_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-```
-
-Create `.env.production` for deployment:
-
-```env
-VITE_API_BASE_URL=https://your-backend.onrender.com/api/v1.0
-VITE_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-```
-
-> ⚠️ Never commit `.env` files. Both are already listed in `.gitignore`.
-
----
-
-## 🚢 Deployment (Vercel)
-
-1. Push code to GitHub
-2. Import repository at [vercel.com](https://vercel.com)
-3. Add environment variables in Vercel project settings:
-   - `VITE_API_BASE_URL` → backend URL + `/api/v1.0`
-   - `VITE_CLOUDINARY_CLOUD_NAME` → your Cloudinary cloud name
-4. Vercel auto-deploys on every push to `main`
-
----
-
-## 📦 Scripts
-
-| Command | Description |
-|---|---|
-| `npm run dev` | Start development server |
-| `npm run build` | Create production build |
-| `npm run preview` | Preview production build locally |
-| `npm run lint` | Run ESLint |
-
----
-
-## 🧩 Architecture Highlights
-
-- Modular component structure — UI, logic, and API calls are cleanly separated
-- Context-driven authentication state — no prop drilling for auth
-- Centralized API configuration — all endpoints in one file (`apiEndpoints.js`)
-- Axios interceptors handle token attachment and error recovery globally
-- Scalable folder structure ready for future feature additions
-
----
-
-## 🔗 Related
-
-- [Backend Repository](https://github.com/Lakshaya1008/Money-Manager-Project/tree/main/Backend/moneymanager) — Spring Boot REST API (Java)
-
----
-
-## 🙌 Acknowledgements
-
-[React](https://react.dev) · [Vite](https://vitejs.dev) · [Tailwind CSS](https://tailwindcss.com) · [Recharts](https://recharts.org) · [Lucide Icons](https://lucide.dev) · [Cloudinary](https://cloudinary.com)
-
----
-
-## 📄 License
-
-This project is built for educational and demonstration purposes.
+# Preview production build
+npm run preview

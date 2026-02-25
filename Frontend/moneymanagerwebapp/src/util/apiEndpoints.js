@@ -1,57 +1,182 @@
-export const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api/v1.0";
+import Dashboard from "../components/Dashboard.jsx";
+import {useUser} from "../hooks/useUser.jsx";
+import {Download, Search} from "lucide-react";
+import {useState} from "react";
+import axiosConfig from "../util/axiosConfig.jsx";
+import {API_ENDPOINTS} from "../util/apiEndpoints.js";
+import toast from "react-hot-toast";
+import TransactionInfoCard from "../components/TransactionInfoCard.jsx";
+import moment from "moment";
 
-export const API_ENDPOINTS = {
-    // ─── Auth (public) ──────────────────────────────────────────────
-    REGISTER:           `${BASE_URL}/register`,
-    LOGIN:              `${BASE_URL}/login`,
-    ACTIVATE:           `${BASE_URL}/activate`,
-    FORGOT_PASSWORD:    `${BASE_URL}/forgot-password`,   // ← NEW
-    RESET_PASSWORD:     `${BASE_URL}/reset-password`,    // ← NEW
+const Filter = () => {
+    useUser();
+    const [type, setType] = useState("income");
+    const [appliedType, setAppliedType] = useState("income");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const [keyword, setKeyword] = useState("");
+    const [sortField, setSortField] = useState("date");
+    const [sortOrder, setSortOrder] = useState("asc");
+    const [transactions, setTransactions] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [downloadLoading, setDownloadLoading] = useState(false);
 
-    // ─── Profile (protected) ────────────────────────────────────────
-    GET_PROFILE:        `${BASE_URL}/profile`,
-    UPDATE_PROFILE:     `${BASE_URL}/profile`,
-    GET_USER_INFO:      `${BASE_URL}/profile`,
-    UPDATE_NAME:        `${BASE_URL}/profile/update-name`,
-    CHANGE_PASSWORD:    `${BASE_URL}/profile/change-password`,
+    const handleSearch = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const response = await axiosConfig.post(API_ENDPOINTS.APPLY_FILTERS, {
+                type,
+                startDate,
+                endDate,
+                keyword,
+                sortField,
+                sortOrder
+            });
+            setTransactions(response.data);
+            setAppliedType(type);
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to fetch transactions");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    // ─── Categories ─────────────────────────────────────────────────
-    GET_ALL_CATEGORIES:   `${BASE_URL}/categories`,
-    GET_CATEGORY_BY_TYPE: (type) => `${BASE_URL}/categories/${type}`,
-    ADD_CATEGORY:         `${BASE_URL}/categories`,
-    UPDATE_CATEGORY:      (id) => `${BASE_URL}/categories/${id}`,
-    DELETE_CATEGORY:      (id) => `${BASE_URL}/categories/${id}`,
+    // Downloads a full Excel report (both income + expense sheets)
+    // Uses the current filter values as optional params
+    const handleDownloadFullReport = async () => {
+        setDownloadLoading(true);
+        try {
+            // Build query params — only include non-empty values
+            // Backend ExcelController uses @DateTimeFormat(ISO_DATE_TIME) so needs
+            // full datetime format "yyyy-MM-ddTHH:mm:ss", not just "yyyy-MM-dd"
+            const params = {};
+            if (startDate) params.startDate = `${startDate}T00:00:00`;
+            if (endDate) params.endDate = `${endDate}T23:59:59`;
+            if (keyword) params.keyword = keyword;
 
-    // ─── Income ─────────────────────────────────────────────────────
-    GET_ALL_INCOME:  `${BASE_URL}/incomes`,
-    ADD_INCOME:      `${BASE_URL}/incomes`,
-    DELETE_INCOME:   (id) => `${BASE_URL}/incomes/${id}`,
+            const response = await axiosConfig.get(API_ENDPOINTS.DOWNLOAD_FULL_REPORT, {
+                params,
+                responseType: "blob",
+            });
 
-    // ─── Expense ────────────────────────────────────────────────────
-    GET_ALL_EXPENSE: `${BASE_URL}/expenses`,
-    ADD_EXPENSE:     `${BASE_URL}/expenses`,
-    DELETE_EXPENSE:  (id) => `${BASE_URL}/expenses/${id}`,
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement("a");
+            link.href = url;
 
-    // ─── Dashboard ──────────────────────────────────────────────────
-    GET_DASHBOARD_DATA: `${BASE_URL}/dashboard`,
-    DASHBOARD_DATA:     `${BASE_URL}/dashboard`,
+            // Build a meaningful filename using date range if provided
+            const from = startDate || "all";
+            const to = endDate || "today";
+            link.setAttribute("download", `full_report_${from}_to_${to}.xlsx`);
 
-    // ─── Filter ─────────────────────────────────────────────────────
-    FILTER_TRANSACTIONS: `${BASE_URL}/filter`,
-    APPLY_FILTERS:       `${BASE_URL}/filter`,
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success("Full report downloaded!");
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to download full report");
+        } finally {
+            setDownloadLoading(false);
+        }
+    };
 
-    // ─── Excel download ─────────────────────────────────────────────
-    DOWNLOAD_INCOME_EXCEL:  `${BASE_URL}/excel/download/income`,
-    DOWNLOAD_EXPENSE_EXCEL: `${BASE_URL}/excel/download/expense`,
+    return (
+        <Dashboard activeMenu="Filters">
+            <div className="my-5 mx-auto">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-semibold">Filter Transactions</h2>
 
-    // ─── Email reports ──────────────────────────────────────────────
-    EMAIL_INCOME_EXCEL:  `${BASE_URL}/email/income-excel`,
-    EMAIL_EXPENSE_EXCEL: `${BASE_URL}/email/expense-excel`,
-    EMAIL_TEST:          `${BASE_URL}/email/test`,
+                    {/* Download Full Report button — uses current filter params */}
+                    <button
+                        onClick={handleDownloadFullReport}
+                        disabled={downloadLoading}
+                        className={`flex items-center gap-2 px-4 py-2 bg-purple-800 text-white text-sm rounded-lg hover:bg-purple-900 transition-colors ${downloadLoading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+                    >
+                        <Download size={15} />
+                        {downloadLoading ? "Downloading..." : "Download Full Report"}
+                    </button>
+                </div>
 
-    // ─── Health ─────────────────────────────────────────────────────
-    HEALTH: `${BASE_URL}/health`,
+                <div className="card p-4 mb-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <h5 className="text-lg font-semibold">Select the filters</h5>
+                    </div>
 
-    // ─── Cloudinary ─────────────────────────────────────────────────
-    UPLOAD_IMAGE: `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
+                    {/* onSubmit added so pressing Enter triggers search */}
+                    <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1" htmlFor="type">Type</label>
+                            <select value={type} id="type" className="w-full border rounded px-3 py-2" onChange={e => setType(e.target.value)}>
+                                <option value="income">Income</option>
+                                <option value="expense">Expense</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label htmlFor="startdate" className="block text-sm font-medium mb-1">Start Date</label>
+                            <input value={startDate} id="startdate" type="date" className="w-full border rounded px-3 py-2" onChange={e => setStartDate(e.target.value)} />
+                        </div>
+                        <div>
+                            <label htmlFor="enddate" className="block text-sm font-medium mb-1">End Date</label>
+                            <input value={endDate} id="enddate" type="date" className="w-full border rounded px-3 py-2" onChange={e => setEndDate(e.target.value)} />
+                        </div>
+                        <div>
+                            <label htmlFor="sortfield" className="block text-sm font-medium mb-1">Sort Field</label>
+                            <select value={sortField} id="sortfield" className="w-full border rounded px-3 py-2" onChange={e => setSortField(e.target.value)}>
+                                <option value="date">Date</option>
+                                <option value="amount">Amount</option>
+                                <option value="name">Name</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label htmlFor="sortorder" className="block text-sm font-medium mb-1">Sort Order</label>
+                            <select value={sortOrder} id="sortorder" className="w-full border rounded px-3 py-2" onChange={e => setSortOrder(e.target.value)}>
+                                <option value="asc">Ascending</option>
+                                <option value="desc">Descending</option>
+                            </select>
+                        </div>
+                        <div className="sm:col-span-1 md:col-span-1 flex items-end">
+                            <div className="w-full">
+                                <label htmlFor="keyword" className="block text-sm font-medium mb-1">Search</label>
+                                <input value={keyword} id="keyword" type="text" placeholder="Search..." className="w-full border rounded px-3 py-2" onChange={e => setKeyword(e.target.value)} />
+                            </div>
+                            {/* type="submit" so Enter key also triggers this */}
+                            <button type="submit" className="ml-2 mb-1 p-2 bg-purple-800 hover:bg-purple-900 text-white rounded flex items-center justify-center cursor-pointer">
+                                <Search size={20} />
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div className="card p-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <h5 className="text-lg font-semibold">Transactions</h5>
+                        {transactions.length > 0 && (
+                            <span className="text-sm text-gray-500">{transactions.length} result{transactions.length !== 1 ? "s" : ""}</span>
+                        )}
+                    </div>
+
+                    {!loading && transactions.length === 0 && (
+                        <p className="text-gray-500">Select the filters and click apply to filter the transactions</p>
+                    )}
+                    {loading && (
+                        <p className="text-gray-500">Loading Transactions...</p>
+                    )}
+                    {!loading && transactions.map((transaction) => (
+                        <TransactionInfoCard
+                            key={transaction.id}
+                            title={transaction.name}
+                            icon={transaction.icon}
+                            date={moment(transaction.date).format("Do MMM YYYY")}
+                            amount={transaction.amount}
+                            type={appliedType}
+                            hideDeleteBtn
+                        />
+                    ))}
+                </div>
+            </div>
+        </Dashboard>
+    );
 };
+
+export default Filter;
