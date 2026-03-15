@@ -1,6 +1,7 @@
 import {useState} from "react";
 import PropTypes from "prop-types";
 import EmojiPickerPopup from "./EmojiPickerPopup.jsx";
+import {Link} from "react-router-dom";
 
 const AddIncomeForm = ({onAddIncome, categories = []}) => {
     const [name, setName] = useState("");
@@ -9,25 +10,29 @@ const AddIncomeForm = ({onAddIncome, categories = []}) => {
     const [date, setDate] = useState("");
     const [icon, setIcon] = useState("");
 
-    const handleSubmit = (e) => {
+    // Fixed: handleSubmit is now async and awaits the parent's onAddIncome call.
+    // Form only resets if the parent returns true (success). Previously it reset
+    // immediately regardless of outcome, losing the user's input on backend errors.
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         const incomeData = {
             name: name.trim(),
             amount: parseFloat(amount),
             categoryId: parseInt(categoryId),
-            date: date || undefined, // Let backend use current datetime if not provided
+            date: date || undefined,
             icon: icon || undefined
         };
 
-        onAddIncome(incomeData);
+        const success = await onAddIncome(incomeData);
 
-        // Reset form
-        setName("");
-        setAmount("");
-        setCategoryId("");
-        setDate("");
-        setIcon("");
+        if (success) {
+            setName("");
+            setAmount("");
+            setCategoryId("");
+            setDate("");
+            setIcon("");
+        }
     };
 
     return (
@@ -59,20 +64,30 @@ const AddIncomeForm = ({onAddIncome, categories = []}) => {
                 <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
                     Category *
                 </label>
-                <select
-                    id="category"
-                    value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    required
-                >
-                    <option value="">Select a category</option>
-                    {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                            {category.name}
-                        </option>
-                    ))}
-                </select>
+                {categories.length === 0 ? (
+                    <div className="w-full px-4 py-3 border border-amber-200 bg-amber-50 rounded-lg text-sm text-amber-800">
+                        No income categories yet.{" "}
+                        <Link to="/category" className="font-medium underline hover:text-amber-900">
+                            Create one on the Category page
+                        </Link>{" "}
+                        first, then come back to add income.
+                    </div>
+                ) : (
+                    <select
+                        id="category"
+                        value={categoryId}
+                        onChange={(e) => setCategoryId(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        required
+                    >
+                        <option value="">Select a category</option>
+                        {categories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                                {category.name}
+                            </option>
+                        ))}
+                    </select>
+                )}
             </div>
 
             {/* Amount */}
@@ -115,7 +130,8 @@ const AddIncomeForm = ({onAddIncome, categories = []}) => {
             <div className="flex justify-end gap-3 mt-6">
                 <button
                     type="submit"
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    disabled={categories.length === 0}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Add Income
                 </button>

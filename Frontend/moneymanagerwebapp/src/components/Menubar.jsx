@@ -1,19 +1,18 @@
 import { useContext, useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../context/AppContext.jsx";
-import { User, LogOut, ChevronDown } from "lucide-react";
+import { User, LogOut, ChevronDown, Menu } from "lucide-react";
 
-const Menubar = () => {
+// onMenuClick — called when the hamburger is tapped on mobile to open the drawer
+const Menubar = ({ onMenuClick }) => {
     const { user, clearUser } = useContext(AppContext);
     const navigate = useNavigate();
     const [showDropdown, setShowDropdown] = useState(false);
     const [imgError, setImgError] = useState(false);
     const dropdownRef = useRef(null);
 
-    // Reset img error when user changes
     useEffect(() => { setImgError(false); }, [user?.profileImageUrl]);
 
-    // Close dropdown when clicking outside
     useEffect(() => {
         const handler = (e) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -33,15 +32,27 @@ const Menubar = () => {
 
     return (
         <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100 shadow-sm">
-            {/* Brand */}
-            <div
-                className="flex items-center gap-2 cursor-pointer"
-                onClick={() => navigate("/dashboard")}
-            >
-                <span className="text-2xl">💰</span>
-                <span className="text-lg font-bold text-gray-800 hidden sm:block">
-                    Money Manager
-                </span>
+
+            <div className="flex items-center gap-3">
+                {/* Hamburger — only visible below 1080px, triggers mobile drawer */}
+                <button
+                    onClick={onMenuClick}
+                    className="min-[1081px]:hidden p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 cursor-pointer"
+                    aria-label="Open navigation"
+                >
+                    <Menu size={22} />
+                </button>
+
+                {/* Brand */}
+                <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    onClick={() => navigate("/dashboard")}
+                >
+                    <span className="text-2xl">💰</span>
+                    <span className="text-lg font-bold text-gray-800 hidden sm:block">
+                        Money Manager
+                    </span>
+                </div>
             </div>
 
             {/* User menu */}
@@ -51,7 +62,6 @@ const Menubar = () => {
                     className="flex items-center gap-2 px-3 py-1.5 rounded-xl
                                hover:bg-gray-50 transition-colors duration-150"
                 >
-                    {/* Avatar circle */}
                     <div className="w-9 h-9 rounded-full overflow-hidden bg-purple-100
                                     flex items-center justify-center border border-purple-200 shrink-0">
                         {showAvatar ? (
@@ -78,12 +88,9 @@ const Menubar = () => {
                     />
                 </button>
 
-                {/* Dropdown menu */}
                 {showDropdown && (
                     <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg
                                     border border-gray-100 py-1 z-50">
-
-                        {/* Header — user info */}
                         <div className="px-4 py-2.5 border-b border-gray-50">
                             <p className="text-xs font-semibold text-gray-800 truncate">
                                 {user?.fullName}
@@ -91,7 +98,6 @@ const Menubar = () => {
                             <p className="text-xs text-gray-400 truncate">{user?.email}</p>
                         </div>
 
-                        {/* My Profile ← NEW */}
                         <button
                             onClick={() => { setShowDropdown(false); navigate("/profile"); }}
                             className="flex items-center gap-3 w-full px-4 py-2.5 text-sm
@@ -101,7 +107,6 @@ const Menubar = () => {
                             <span>My Profile</span>
                         </button>
 
-                        {/* Logout */}
                         <button
                             onClick={handleLogout}
                             className="flex items-center gap-3 w-full px-4 py-2.5 text-sm

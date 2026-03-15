@@ -5,7 +5,9 @@ import EmojiPicker from "emoji-picker-react";
 const EmojiPickerPopup = ({icon, onSelect}) => {
     const [isOpen, setIsOpen] = useState(false);
     const handleEmojiClick = (emoji) => {
-        onSelect(emoji?.imageUrl || "");
+        // Fixed: save the actual emoji character (emoji.emoji) not the CDN image URL (emoji.imageUrl).
+        // imageUrl is an external CDN dependency that can break; the emoji character is self-contained.
+        onSelect(emoji?.emoji || "");
         setIsOpen(false);
     }
     return (
@@ -15,11 +17,11 @@ const EmojiPickerPopup = ({icon, onSelect}) => {
                 className="flex items-center gap-4 cursor-pointer">
                 <div className="w-12 h-12 flex items-center justify-center text-2xl bg-purple-50 text-purple-500 rounded-lg">
                     {icon ? (
-                        <img src={icon} alt="Icon" className="w-12 h-12" />
+                        // Fixed: render as text span since icon is now an emoji character
+                        <span className="text-2xl">{icon}</span>
                     ): (
                         <Image />
                     )}
-
                 </div>
                 <p>{icon ? "Change icon" : "Pick Icon"}</p>
             </div>

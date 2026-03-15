@@ -38,9 +38,11 @@ const Login = () => {
                 email: email.toLowerCase().trim(),
                 password,
             });
-            const {token, user} = response.data;
+            // Backend returns flat object: {token, id, fullName, email, profileImageUrl, ...}
+            // Destructure token out, spread the rest as userData
+            const {token, ...userData} = response.data;
             if (token) {
-                login(user, token);
+                login(userData, token);
                 navigate("/dashboard");
             }
         } catch (error) {
@@ -82,7 +84,6 @@ const Login = () => {
                                     placeholder="*********"
                                     type="password"
                                 />
-                                {/* Forgot password link — sits right below password field */}
                                 <div className="flex justify-end mt-1">
                                     <Link
                                         to="/forgot-password"

@@ -22,7 +22,8 @@ const DeleteAlert = ({content, onDelete}) => {
                     className="add-btn add-btn-fill">
                     {loading ? (
                         <>
-                            <LoaderCircle className="h-4 w-4 animated-spin" />
+                            {/* Fixed: was "animated-spin" — correct Tailwind class is "animate-spin" */}
+                            <LoaderCircle className="h-4 w-4 animate-spin" />
                             Deleting...
                         </>
                     ): (

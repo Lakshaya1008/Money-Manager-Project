@@ -3,6 +3,7 @@ import Dashboard from "../components/Dashboard.jsx";
 import ExpenseOverview from "../components/ExpenseOverview.jsx";
 import ExpenseList from "../components/ExpenseList.jsx";
 import AddExpenseForm from "../components/AddExpenseForm.jsx";
+import DeleteAlert from "../components/DeleteAlert.jsx";
 import axiosConfig from "../util/axiosConfig.jsx";
 import { API_ENDPOINTS } from "../util/apiEndpoints.js";
 import { useUser } from "../hooks/useUser.jsx";
@@ -13,10 +14,12 @@ const Expense = () => {
     useUser();
 
     const [expenseData, setExpenseData] = useState([]);
-    // FIX: fetch EXPENSE categories so AddExpenseForm dropdown is populated
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
     const [openAddModal, setOpenAddModal] = useState(false);
+
+    // Delete confirmation state — stores the expense record pending deletion
+    const [deleteAlert, setDeleteAlert] = useState({ show: false, expense: null });
 
     const fetchExpenseData = async () => {
         if (loading) return;
@@ -25,22 +28,20 @@ const Expense = () => {
             const response = await axiosConfig.get(API_ENDPOINTS.GET_ALL_EXPENSE);
             setExpenseData(response.data || []);
         } catch (error) {
-            console.error("Error fetching expense data:", error);
             toast.error(error.response?.data?.message || "Failed to load expense data");
         } finally {
             setLoading(false);
         }
     };
 
-    // FIX: fetch categories filtered by EXPENSE type for the add form dropdown
     const fetchCategories = async () => {
         try {
             const response = await axiosConfig.get(
                 API_ENDPOINTS.GET_CATEGORY_BY_TYPE("EXPENSE")
             );
             setCategories(response.data || []);
-        } catch (error) {
-            console.error("Error fetching expense categories:", error);
+        } catch {
+            // Silent
         }
     };
 
@@ -50,18 +51,9 @@ const Expense = () => {
     }, []);
 
     const handleAddExpense = async (expense) => {
-        if (!expense.name?.trim()) {
-            toast.error("Expense name is required");
-            return false;
-        }
-        if (!expense.amount || Number(expense.amount) <= 0) {
-            toast.error("Amount must be greater than zero");
-            return false;
-        }
-        if (!expense.categoryId) {
-            toast.error("Please select a category");
-            return false;
-        }
+        if (!expense.name?.trim()) { toast.error("Expense name is required"); return false; }
+        if (!expense.amount || Number(expense.amount) <= 0) { toast.error("Amount must be greater than zero"); return false; }
+        if (!expense.categoryId) { toast.error("Please select a category"); return false; }
 
         try {
             const payload = {
@@ -69,7 +61,6 @@ const Expense = () => {
                 amount: expense.amount,
                 categoryId: expense.categoryId,
                 icon: expense.icon || null,
-                // date is optional — omit if empty (backend defaults to now)
                 ...(expense.date && { date: expense.date }),
             };
             await axiosConfig.post(API_ENDPOINTS.ADD_EXPENSE, payload);
@@ -78,29 +69,33 @@ const Expense = () => {
             toast.success("Expense added successfully!");
             return true;
         } catch (error) {
-            console.error("Error adding expense:", error);
             toast.error(error.response?.data?.message || "Failed to add expense");
             return false;
         }
     };
 
-    const handleDeleteExpense = async (expenseId) => {
+    // Fix: was called directly from TransactionInfoCard — now opens a confirmation modal first.
+    // The actual deletion only fires if the user clicks "Delete" in the modal.
+    const confirmDeleteExpense = (expenseId) => {
+        const expense = expenseData.find(e => e.id === expenseId);
+        setDeleteAlert({ show: true, expense });
+    };
+
+    const executeDeleteExpense = async () => {
+        if (!deleteAlert.expense) return;
         try {
-            await axiosConfig.delete(API_ENDPOINTS.DELETE_EXPENSE(expenseId));
+            await axiosConfig.delete(API_ENDPOINTS.DELETE_EXPENSE(deleteAlert.expense.id));
+            setDeleteAlert({ show: false, expense: null });
             fetchExpenseData();
             toast.success("Expense deleted successfully!");
         } catch (error) {
-            console.error("Error deleting expense:", error);
             toast.error(error.response?.data?.message || "Failed to delete expense");
         }
     };
 
-    // FIX: email/download handlers were missing — ExpenseList was never rendered
     const handleDownloadExcel = async () => {
         try {
-            const response = await axiosConfig.get(API_ENDPOINTS.DOWNLOAD_EXPENSE_EXCEL, {
-                responseType: "blob",
-            });
+            const response = await axiosConfig.get(API_ENDPOINTS.DOWNLOAD_EXPENSE_EXCEL, { responseType: "blob" });
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement("a");
             link.href = url;
@@ -111,8 +106,15 @@ const Expense = () => {
             window.URL.revokeObjectURL(url);
             toast.success("Expense report downloaded!");
         } catch (error) {
-            console.error("Error downloading expense excel:", error);
-            toast.error(error.response?.data?.message || "Failed to download report");
+            if (error.response?.data instanceof Blob) {
+                try {
+                    const text = await error.response.data.text();
+                    const json = JSON.parse(text);
+                    toast.error(json.message || "Failed to download report");
+                } catch { toast.error("Failed to download report"); }
+            } else {
+                toast.error(error.response?.data?.message || "Failed to download report");
+            }
         }
     };
 
@@ -121,7 +123,6 @@ const Expense = () => {
             await axiosConfig.get(API_ENDPOINTS.EMAIL_EXPENSE_EXCEL);
             toast.success("Expense report sent to your email!");
         } catch (error) {
-            console.error("Error emailing expense report:", error);
             toast.error(error.response?.data?.message || "Failed to send email report");
         }
     };
@@ -130,31 +131,33 @@ const Expense = () => {
         <Dashboard activeMenu="Expense">
             <div className="my-5 mx-auto">
                 <div className="grid grid-cols-1 gap-6">
-                    {/* Chart + Add button
-                        FIX: prop was onAddExpense but ExpenseOverview expects onExpenseIncome */}
                     <ExpenseOverview
                         transactions={expenseData}
                         onExpenseIncome={() => setOpenAddModal(true)}
                     />
 
-                    {/* FIX: ExpenseList was never rendered — no list, no email/download buttons */}
                     <ExpenseList
                         transactions={expenseData}
-                        onDelete={handleDeleteExpense}
+                        onDelete={confirmDeleteExpense}
                         onDownload={handleDownloadExcel}
                         onEmail={handleEmailReport}
+                        onAdd={() => setOpenAddModal(true)}
                     />
 
                     {/* Add Expense Modal */}
+                    <Modal isOpen={openAddModal} onClose={() => setOpenAddModal(false)} title="Add Expense">
+                        <AddExpenseForm onAddExpense={handleAddExpense} categories={categories} />
+                    </Modal>
+
+                    {/* Delete Confirmation Modal */}
                     <Modal
-                        isOpen={openAddModal}
-                        onClose={() => setOpenAddModal(false)}
-                        title="Add Expense"
+                        isOpen={deleteAlert.show}
+                        onClose={() => setDeleteAlert({ show: false, expense: null })}
+                        title="Delete Expense"
                     >
-                        {/* FIX: categories prop was missing → dropdown always empty */}
-                        <AddExpenseForm
-                            onAddExpense={handleAddExpense}
-                            categories={categories}
+                        <DeleteAlert
+                            content={`Are you sure you want to delete "${deleteAlert.expense?.name}"? This cannot be undone.`}
+                            onDelete={executeDeleteExpense}
                         />
                     </Modal>
                 </div>

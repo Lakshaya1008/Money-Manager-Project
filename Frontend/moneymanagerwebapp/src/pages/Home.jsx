@@ -12,6 +12,18 @@ import RecentTransactions from "../components/RecentTransactions.jsx";
 import FinanceOverview from "../components/FinanceOverview.jsx";
 import Transactions from "../components/Transactions.jsx";
 
+// Skeleton pulse card shown while dashboard data is loading.
+// Prevents the jarring ₹0 flash that users see before data arrives.
+const InfoCardSkeleton = () => (
+    <div className="flex gap-6 bg-white p-6 rounded-2xl shadow-md shadow-gray-100 border border-gray-200/50 animate-pulse">
+        <div className="w-14 h-14 rounded-full bg-gray-200" />
+        <div className="flex-1 py-1">
+            <div className="h-3 bg-gray-200 rounded w-24 mb-3" />
+            <div className="h-6 bg-gray-200 rounded w-32" />
+        </div>
+    </div>
+);
+
 const Home = () => {
     useUser();
 
@@ -21,24 +33,21 @@ const Home = () => {
 
     const fetchDashboardData = async () => {
         if (loading) return;
-
         setLoading(true);
-
         try {
             const response = await axiosConfig.get(API_ENDPOINTS.DASHBOARD_DATA);
             if (response.status === 200) {
                 setDashboardData(response.data);
             }
-        }catch (error) {
-            toast.error('Failed to load dashboard data');
+        } catch {
+            toast.error("Failed to load dashboard data");
         } finally {
             setLoading(false);
         }
-    }
+    };
 
     useEffect(() => {
         fetchDashboardData();
-        return () => {};
     }, []);
 
     return (
@@ -46,41 +55,49 @@ const Home = () => {
             <Dashboard activeMenu="Dashboard">
                 <div className="my-5 mx-auto">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Display the cards*/}
-                        <InfoCard
-                            icon={<WalletCards />}
-                            label="Total Balance"
-                            value={addThousandsSeparator(dashboardData?.totalBalance || 0)}
-                            color="bg-purple-800"
-                        />
-                        <InfoCard
-                            icon={<Wallet />}
-                            label="Total Income"
-                            value={addThousandsSeparator(dashboardData?.totalIncome || 0)}
-                            color="bg-green-800"
-                        />
-                        <InfoCard
-                            icon={<Coins />}
-                            label="Total Expense"
-                            value={addThousandsSeparator(dashboardData?.totalExpense || 0)}
-                            color="bg-red-800"
-                        />
+                        {/* Fix: show skeleton cards while loading instead of ₹0 */}
+                        {loading || !dashboardData ? (
+                            <>
+                                <InfoCardSkeleton />
+                                <InfoCardSkeleton />
+                                <InfoCardSkeleton />
+                            </>
+                        ) : (
+                            <>
+                                <InfoCard
+                                    icon={<WalletCards />}
+                                    label="Total Balance"
+                                    value={addThousandsSeparator(dashboardData.totalBalance)}
+                                    color="bg-purple-800"
+                                />
+                                <InfoCard
+                                    icon={<Wallet />}
+                                    label="Total Income"
+                                    value={addThousandsSeparator(dashboardData.totalIncome)}
+                                    color="bg-green-800"
+                                />
+                                <InfoCard
+                                    icon={<Coins />}
+                                    label="Total Expense"
+                                    value={addThousandsSeparator(dashboardData.totalExpense)}
+                                    color="bg-red-800"
+                                />
+                            </>
+                        )}
                     </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                        {/* Recent transactions */}
                         <RecentTransactions
                             transactions={dashboardData?.recentTransactions}
                             onMore={() => navigate("/expense")}
                         />
 
-                        {/* finance overview chart */}
                         <FinanceOverview
                             totalBalance={dashboardData?.totalBalance || 0}
                             totalIncome={dashboardData?.totalIncome || 0}
                             totalExpense={dashboardData?.totalExpense || 0}
                         />
 
-                        {/* Expense transactions */}
                         <Transactions
                             transactions={dashboardData?.recent5Expenses || []}
                             onMore={() => navigate("/expense")}
@@ -88,7 +105,6 @@ const Home = () => {
                             title="Recent Expenses"
                         />
 
-                        {/* Income transactions */}
                         <Transactions
                             transactions={dashboardData?.recent5Incomes || []}
                             onMore={() => navigate("/income")}
@@ -99,7 +115,7 @@ const Home = () => {
                 </div>
             </Dashboard>
         </div>
-    )
-}
+    );
+};
 
 export default Home;

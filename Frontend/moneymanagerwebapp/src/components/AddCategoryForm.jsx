@@ -4,7 +4,7 @@ import EmojiPickerPopup from "./EmojiPickerPopup.jsx";
 
 const AddCategoryForm = ({onAddCategory, initialCategoryData, isEditing = false}) => {
     const [name, setName] = useState("");
-    const [type, setType] = useState("INCOME"); // ✅ UPPERCASE for API
+    const [type, setType] = useState("INCOME");
     const [icon, setIcon] = useState("");
 
     useEffect(() => {
@@ -17,28 +17,16 @@ const AddCategoryForm = ({onAddCategory, initialCategoryData, isEditing = false}
 
     const handleSubmit = (e) => {
         e.preventDefault();
-
-        const categoryData = {
-            name: name.trim(),
-            type, // Will be "INCOME" or "EXPENSE" in UPPERCASE
-            icon
-        };
-
-        // If editing, include the ID
+        const categoryData = { name: name.trim(), type, icon };
         if (isEditing && initialCategoryData?.id) {
             categoryData.id = initialCategoryData.id;
         }
-
         onAddCategory(categoryData);
     };
 
     return (
         <form onSubmit={handleSubmit}>
-            {/* Icon Picker */}
-            <EmojiPickerPopup
-                icon={icon}
-                onSelect={setIcon}
-            />
+            <EmojiPickerPopup icon={icon} onSelect={setIcon} />
 
             {/* Category Name */}
             <div className="mb-4">
@@ -56,8 +44,27 @@ const AddCategoryForm = ({onAddCategory, initialCategoryData, isEditing = false}
                 />
             </div>
 
-            {/* Category Type - Only show if NOT editing (type is immutable) */}
-            {!isEditing && (
+            {/* Category Type */}
+            {isEditing ? (
+                // Fix: in edit mode, type is immutable — show a read-only badge
+                // instead of hiding it entirely. Previously the user had no idea
+                // whether they were editing an INCOME or EXPENSE category.
+                <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Category Type
+                    </label>
+                    <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium border ${
+                            type === "INCOME"
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : "bg-red-50 text-red-700 border-red-200"
+                        }`}>
+                            {type === "INCOME" ? "💰 Income" : "💸 Expense"}
+                        </span>
+                        <p className="text-xs text-gray-400">Cannot be changed after creation</p>
+                    </div>
+                </div>
+            ) : (
                 <div className="mb-6">
                     <label htmlFor="categoryType" className="block text-sm font-medium text-gray-700 mb-2">
                         Category Type *
@@ -78,7 +85,6 @@ const AddCategoryForm = ({onAddCategory, initialCategoryData, isEditing = false}
                 </div>
             )}
 
-            {/* Submit Button */}
             <div className="flex justify-end gap-3 mt-6">
                 <button
                     type="submit"

@@ -1,13 +1,13 @@
 import logo from "./logo.png";
 import login_bg from "./login-bg.png";
 import landing from "./landing.png";
-import {Coins, FunnelPlus, LayoutDashboard, List, Wallet} from "lucide-react";
+import {Coins, FunnelPlus, LayoutDashboard, List, User, Wallet} from "lucide-react";
 
 export const assets = {
     logo,
     login_bg,
     landing,
-}
+};
 
 export const SIDE_BAR_DATA = [
     {
@@ -39,5 +39,13 @@ export const SIDE_BAR_DATA = [
         label: "Filters",
         icon: FunnelPlus,
         path: "/filter",
+    },
+    // Fix: Profile was only reachable via the Menubar dropdown — many users never find it.
+    // Adding it to the sidebar makes Change Password and Update Photo discoverable.
+    {
+        id: "06",
+        label: "Profile",
+        icon: User,
+        path: "/profile",
     },
 ];

@@ -12,6 +12,8 @@ const Header = () => {
         { name: 'Contact us', to: '/contact' }
     ];
 
+    const closeMenu = () => setIsMenuOpen(false);
+
     return (
         <header className="border-b border-gray-200">
             <div className="container mx-auto px-4">
@@ -25,7 +27,7 @@ const Header = () => {
                     {/* Desktop Navigation */}
                     <nav className="hidden lg:flex items-center space-x-8">
                         {navLinks.map((link) => (
-                            <Link to={link.to} key={link.name} href={link.href} className="text-gray-600 hover:text-purple-600 transition-colors">
+                            <Link to={link.to} key={link.name} className="text-gray-600 hover:text-purple-600 transition-colors">
                                 {link.name}
                             </Link>
                         ))}
@@ -56,25 +58,27 @@ const Header = () => {
             </div>
 
             {/* Mobile Navigation */}
+            {/* Fixed: replaced all <a href> with React Router <Link to> so navigation works without full reload */}
             {isMenuOpen && (
                 <div className="lg:hidden bg-white border-t border-gray-200">
                     <div className="container mx-auto px-4 py-4">
                         <nav className="flex flex-col space-y-4">
                             {navLinks.map((link) => (
-                                <a key={link.name} href={link.href} className="text-gray-600 hover:text-purple-600 transition-colors">
+                                <Link key={link.name} to={link.to} onClick={closeMenu} className="text-gray-600 hover:text-purple-600 transition-colors">
                                     {link.name}
-                                </a>
+                                </Link>
                             ))}
                             <div className="flex flex-col space-y-3 pt-4 border-t border-gray-100">
-                                <a href="#" className="text-gray-600 hover:text-purple-600 transition-colors w-full text-left">
+                                <Link to="/login" onClick={closeMenu} className="text-gray-600 hover:text-purple-600 transition-colors w-full text-left">
                                     Login
-                                </a>
-                                <a
-                                    href="#"
+                                </Link>
+                                <Link
+                                    to="/signup"
+                                    onClick={closeMenu}
                                     className="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors text-center"
                                 >
                                     Get Started
-                                </a>
+                                </Link>
                             </div>
                         </nav>
                     </div>

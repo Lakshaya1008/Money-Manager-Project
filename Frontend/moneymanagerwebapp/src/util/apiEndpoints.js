@@ -9,9 +9,8 @@ export const API_ENDPOINTS = {
     RESET_PASSWORD:     `${BASE_URL}/reset-password`,
 
     // ─── Profile (protected) ────────────────────────────────────────
-    GET_PROFILE:        `${BASE_URL}/profile`,
-    UPDATE_PROFILE:     `${BASE_URL}/profile`,
-    GET_USER_INFO:      `${BASE_URL}/profile`,
+    GET_USER_INFO:      `${BASE_URL}/profile`,      // GET  — fetch current user
+    UPDATE_PROFILE:     `${BASE_URL}/profile`,      // PUT  — update name/photo
     UPDATE_NAME:        `${BASE_URL}/profile/update-name`,
     CHANGE_PASSWORD:    `${BASE_URL}/profile/change-password`,
 
@@ -33,23 +32,20 @@ export const API_ENDPOINTS = {
     DELETE_EXPENSE:  (id) => `${BASE_URL}/expenses/${id}`,
 
     // ─── Dashboard ──────────────────────────────────────────────────
-    GET_DASHBOARD_DATA: `${BASE_URL}/dashboard`,
-    DASHBOARD_DATA:     `${BASE_URL}/dashboard`,
+    DASHBOARD_DATA: `${BASE_URL}/dashboard`,
 
     // ─── Filter ─────────────────────────────────────────────────────
-    FILTER_TRANSACTIONS: `${BASE_URL}/filter`,
-    APPLY_FILTERS:       `${BASE_URL}/filter`,
+    APPLY_FILTERS: `${BASE_URL}/filter`,
 
     // ─── Excel download ─────────────────────────────────────────────
-    DOWNLOAD_INCOME_EXCEL:  `${BASE_URL}/excel/download/income`,
-    DOWNLOAD_EXPENSE_EXCEL: `${BASE_URL}/excel/download/expense`,
-    // Full report: accepts optional query params startDate, endDate, keyword
-    DOWNLOAD_FULL_REPORT:   `${BASE_URL}/excel/download/full`,
+    DOWNLOAD_INCOME_EXCEL:    `${BASE_URL}/excel/download/income`,
+    DOWNLOAD_EXPENSE_EXCEL:   `${BASE_URL}/excel/download/expense`,
+    DOWNLOAD_FULL_REPORT:     `${BASE_URL}/excel/download/full`,
+    DOWNLOAD_FILTERED_REPORT: `${BASE_URL}/excel/download/filtered`,
 
     // ─── Email reports ──────────────────────────────────────────────
     EMAIL_INCOME_EXCEL:  `${BASE_URL}/email/income-excel`,
     EMAIL_EXPENSE_EXCEL: `${BASE_URL}/email/expense-excel`,
-    EMAIL_TEST:          `${BASE_URL}/email/test`,
 
     // ─── Health ─────────────────────────────────────────────────────
     HEALTH: `${BASE_URL}/health`,
