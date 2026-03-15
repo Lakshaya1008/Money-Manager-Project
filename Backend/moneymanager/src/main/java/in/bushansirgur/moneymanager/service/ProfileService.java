@@ -10,6 +10,7 @@ import in.bushansirgur.moneymanager.exception.ValidationException;
 import in.bushansirgur.moneymanager.repository.ProfileRepository;
 import in.bushansirgur.moneymanager.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -27,6 +28,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProfileService {
 
     private final ProfileRepository profileRepository;
@@ -70,8 +72,10 @@ public class ProfileService {
                     "Activate your Money Manager account",
                     "Click on the following link to activate your account: " + activationLink);
         } catch (Exception emailEx) {
-            // Email failure must NOT prevent registration — profile is already saved
-            System.err.println("Warning: Failed to send activation email to " + newProfile.getEmail() + ": " + emailEx.getMessage());
+            // Email failure must NOT prevent registration — profile is already saved.
+            // Fix: was System.err.println — replaced with proper SLF4J logger so warnings
+            // appear in Render's structured log stream and are searchable.
+            log.warn("Failed to send activation email to {}: {}", newProfile.getEmail(), emailEx.getMessage());
         }
 
         return toDTO(newProfile);
@@ -88,7 +92,7 @@ public class ProfileService {
         profileRepository.findByEmail(normalizedEmail).ifPresent(profile -> {
             String token = UUID.randomUUID().toString();
             profile.setResetPasswordToken(token);
-            profile.setResetPasswordTokenExpiry(LocalDateTime.now().plusHours(1)); // expires in 1 hour
+            profile.setResetPasswordTokenExpiry(LocalDateTime.now().plusHours(1));
             profileRepository.save(profile);
 
             String resetLink = activationURL + "/reset-password?token=" + token;
@@ -98,7 +102,8 @@ public class ProfileService {
                         "Click the following link to reset your password (valid for 1 hour):\n\n" + resetLink +
                                 "\n\nIf you did not request this, please ignore this email.");
             } catch (Exception e) {
-                System.err.println("Warning: Failed to send reset email to " + normalizedEmail + ": " + e.getMessage());
+                // Fix: was System.err.println — replaced with proper SLF4J logger.
+                log.warn("Failed to send reset email to {}: {}", normalizedEmail, e.getMessage());
             }
         });
     }
@@ -115,14 +120,13 @@ public class ProfileService {
         ProfileEntity profile = profileRepository.findByResetPasswordToken(token)
                 .orElseThrow(() -> new ValidationException("token", "Invalid or expired reset link. Please request a new one."));
 
-        // Check token expiry
         if (profile.getResetPasswordTokenExpiry() == null ||
                 LocalDateTime.now().isAfter(profile.getResetPasswordTokenExpiry())) {
             throw new ValidationException("token", "This reset link has expired. Please request a new one.");
         }
 
         profile.setPassword(passwordEncoder.encode(newPassword));
-        profile.setResetPasswordToken(null);        // clear token after use
+        profile.setResetPasswordToken(null);
         profile.setResetPasswordTokenExpiry(null);
         profileRepository.save(profile);
     }
