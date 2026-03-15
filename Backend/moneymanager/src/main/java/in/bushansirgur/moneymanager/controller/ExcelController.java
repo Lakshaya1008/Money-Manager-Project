@@ -46,7 +46,6 @@ public class ExcelController {
     ) throws IOException {
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
-        // Build a meaningful filename if date range was provided
         String from = startDate != null ? startDate.toLocalDate().toString() : "all";
         String to   = endDate   != null ? endDate.toLocalDate().toString()   : "today";
         response.setHeader("Content-Disposition",
@@ -59,5 +58,43 @@ public class ExcelController {
                 incomeService.filterIncomes(startDate, endDate, keyword, sort),
                 expenseService.filterExpenses(startDate, endDate, keyword, sort)
         );
+    }
+
+    // Downloads exactly what the user sees on the Filter page — same type + same filters.
+    // Called by the "Download Results" button that appears after a search.
+    @GetMapping("/download/filtered")
+    public void downloadFilteredReport(
+            HttpServletResponse response,
+            @RequestParam String type,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(required = false, defaultValue = "") String keyword,
+            @RequestParam(required = false, defaultValue = "date") String sortField,
+            @RequestParam(required = false, defaultValue = "desc") String sortOrder
+    ) throws IOException {
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortOrder)
+                ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Sort sort = Sort.by(direction, sortField);
+
+        String from = startDate != null ? startDate.toLocalDate().toString() : "all";
+        String to   = endDate   != null ? endDate.toLocalDate().toString()   : "today";
+
+        if ("income".equalsIgnoreCase(type)) {
+            response.setHeader("Content-Disposition",
+                    "attachment; filename=income_filtered_" + from + "_to_" + to + ".xlsx");
+            excelService.writeIncomesToExcel(
+                    response.getOutputStream(),
+                    incomeService.filterIncomes(startDate, endDate, keyword, sort)
+            );
+        } else {
+            response.setHeader("Content-Disposition",
+                    "attachment; filename=expense_filtered_" + from + "_to_" + to + ".xlsx");
+            excelService.writeExpensesToExcel(
+                    response.getOutputStream(),
+                    expenseService.filterExpenses(startDate, endDate, keyword, sort)
+            );
+        }
     }
 }
