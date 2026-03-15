@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -26,15 +25,18 @@ public class NotificationService {
     @Value("${money.manager.frontend.url}")
     private String frontendUrl;
 
-
     @Scheduled(cron = "0 0 22 * * *", zone = "Asia/Kolkata")
     public void sendDailyIncomeExpenseReminder() {
         log.info("Job started: sendDailyIncomeExpenseReminder()");
-        List<ProfileEntity> profiles = profileRepository.findAll();
-        for(ProfileEntity profile : profiles) {
+
+        // Fixed: was findAll() — now only sends emails to activated accounts.
+        // Previously every registered-but-unactivated user received daily emails.
+        List<ProfileEntity> profiles = profileRepository.findByIsActiveTrue();
+
+        for (ProfileEntity profile : profiles) {
             String body = "Hi " + profile.getFullName() + ",<br><br>"
                     + "This is a friendly reminder to add your income and expenses for today in Money Manager.<br><br>"
-                    + "<a href="+frontendUrl+" style='display:inline-block;padding:10px 20px;background-color:#4CAF50;color:#fff;text-decoration:none;border-radius:5px;font-weight:bold;'>Go to Money Manager</a>"
+                    + "<a href=" + frontendUrl + " style='display:inline-block;padding:10px 20px;background-color:#4CAF50;color:#fff;text-decoration:none;border-radius:5px;font-weight:bold;'>Go to Money Manager</a>"
                     + "<br><br>Best regards,<br>Money Manager Team";
             emailService.sendEmail(profile.getEmail(), "Daily reminder: Add your income and expenses", body);
         }
@@ -44,10 +46,14 @@ public class NotificationService {
     @Scheduled(cron = "0 0 23 * * *", zone = "Asia/Kolkata")
     public void sendDailyExpenseSummary() {
         log.info("Job started: sendDailyExpenseSummary()");
-        List<ProfileEntity> profiles = profileRepository.findAll();
+
+        // Fixed: was findAll() — now only sends emails to activated accounts.
+        List<ProfileEntity> profiles = profileRepository.findByIsActiveTrue();
+
         LocalDate today = LocalDate.now();
         LocalDateTime startOfDay = today.atStartOfDay();
         LocalDateTime endOfDay = today.atTime(23, 59, 59);
+
         for (ProfileEntity profile : profiles) {
             List<ExpenseDTO> todaysExpenses = expenseService.getExpensesForUserOnDateRange(profile.getId(), startOfDay, endOfDay);
             if (!todaysExpenses.isEmpty()) {
@@ -55,7 +61,7 @@ public class NotificationService {
                 table.append("<table style='border-collapse:collapse;width:100%;'>");
                 table.append("<tr style='background-color:#f2f2f2;'><th style='border:1px solid #ddd;padding:8px;'>S.No</th><th style='border:1px solid #ddd;padding:8px;'>Name</th><th style='border:1px solid #ddd;padding:8px;'>Amount</th><th style='border:1px solid #ddd;padding:8px;'>Category</th></tr>");
                 int i = 1;
-                for(ExpenseDTO expense : todaysExpenses) {
+                for (ExpenseDTO expense : todaysExpenses) {
                     table.append("<tr>");
                     table.append("<td style='border:1px solid #ddd;padding:8px;'>").append(i++).append("</td>");
                     table.append("<td style='border:1px solid #ddd;padding:8px;'>").append(expense.getName()).append("</td>");
@@ -64,7 +70,7 @@ public class NotificationService {
                     table.append("</tr>");
                 }
                 table.append("</table>");
-                String body = "Hi "+profile.getFullName()+",<br/><br/> Here is a summary of your expenses for today:<br/><br/>"+table+"<br/><br/>Best regards,<br/>Money Manager Team";
+                String body = "Hi " + profile.getFullName() + ",<br/><br/> Here is a summary of your expenses for today:<br/><br/>" + table + "<br/><br/>Best regards,<br/>Money Manager Team";
                 emailService.sendEmail(profile.getEmail(), "Your daily Expense summary", body);
             }
         }

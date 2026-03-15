@@ -4,6 +4,7 @@ import in.bushansirgur.moneymanager.exception.EmailException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -14,8 +15,6 @@ import java.util.Map;
 /**
  * Email service using Brevo (Sendinblue) HTTP API v3.
  * This works on Render free tier where SMTP port 587 is blocked.
- *
- * Brevo API docs: https://developers.brevo.com/reference/sendtransacemail
  *
  * Required env vars:
  *   BREVO_API_KEY      = xkeysib-...
@@ -37,19 +36,23 @@ public class BrevoEmailService {
     @Value("${brevo.sender.name:Money Manager}")
     private String senderName;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    // Fixed: was new RestTemplate() with no timeouts — if Brevo API is slow or
+    // unreachable, the thread would hang indefinitely blocking request threads.
+    // Now configured with 5s connect timeout and 10s read timeout.
+    private final RestTemplate restTemplate = buildRestTemplate();
 
-    /**
-     * Returns true if Brevo API key and sender email are configured.
-     */
+    private static RestTemplate buildRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5_000);
+        factory.setReadTimeout(10_000);
+        return new RestTemplate(factory);
+    }
+
     public boolean isConfigured() {
         return apiKey != null && !apiKey.isBlank()
                 && senderEmail != null && !senderEmail.isBlank();
     }
 
-    /**
-     * Send a plain-text or HTML email (no attachment).
-     */
     public void sendEmail(String to, String subject, String body) {
         if (!isConfigured()) {
             throw new EmailException("Brevo API is not configured. Please set BREVO_API_KEY and BREVO_SENDER_EMAIL.");
@@ -59,28 +62,18 @@ public class BrevoEmailService {
                 "sender",      Map.of("name", senderName, "email", senderEmail),
                 "to",          List.of(Map.of("email", to)),
                 "subject",     subject,
-                "htmlContent", body   // Brevo supports HTML natively
+                "htmlContent", body
         );
 
         sendToBrevo(payload, to);
     }
 
-    /**
-     * Send an email with a file attachment.
-     *
-     * @param to         recipient email address
-     * @param subject    email subject
-     * @param body       email body (HTML supported)
-     * @param attachment raw bytes of the attachment
-     * @param filename   filename shown to recipient (e.g. "income.xlsx")
-     */
     public void sendEmailWithAttachment(String to, String subject, String body,
                                         byte[] attachment, String filename) {
         if (!isConfigured()) {
             throw new EmailException("Brevo API is not configured. Please set BREVO_API_KEY and BREVO_SENDER_EMAIL.");
         }
 
-        // Brevo requires attachment content as Base64-encoded string
         String base64Content = Base64.getEncoder().encodeToString(attachment);
 
         Map<String, Object> payload = Map.of(
@@ -97,9 +90,6 @@ public class BrevoEmailService {
         sendToBrevo(payload, to);
     }
 
-    /**
-     * Internal method — sends a POST request to Brevo API and handles errors.
-     */
     private void sendToBrevo(Map<String, Object> payload, String recipient) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

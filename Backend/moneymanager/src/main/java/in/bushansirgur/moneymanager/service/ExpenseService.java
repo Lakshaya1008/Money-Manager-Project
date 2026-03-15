@@ -30,7 +30,6 @@ public class ExpenseService {
     public ExpenseDTO addExpense(ExpenseDTO dto) {
         ProfileEntity profile = profileService.getCurrentProfile();
 
-        // Validate required fields
         if (dto.getName() == null || dto.getName().trim().isEmpty()) {
             throw new ValidationException("name", "Expense name is required");
         }
@@ -41,19 +40,17 @@ public class ExpenseService {
             throw new ValidationException("categoryId", "Category ID is required. Please select a category for this expense.");
         }
 
-        // Default to current date and time if not provided
         if (dto.getDate() == null) {
             dto.setDate(LocalDateTime.now());
         }
 
         CategoryEntity category = categoryRepository.findByIdAndProfileId(dto.getCategoryId(), profile.getId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                    "Category with ID " + dto.getCategoryId() + " not found. Please create this category first or use a valid category ID from your categories list."));
+                        "Category with ID " + dto.getCategoryId() + " not found. Please create this category first or use a valid category ID from your categories list."));
 
-        // Verify the category type is for expense
         if (category.getType() != null && !category.getType().equalsIgnoreCase("EXPENSE")) {
             throw new ValidationException("categoryId",
-                "Category '" + category.getName() + "' is not an expense category. Please select a category with type 'EXPENSE'.");
+                    "Category '" + category.getName() + "' is not an expense category. Please select a category with type 'EXPENSE'.");
         }
 
         ExpenseEntity newExpense = toEntity(dto, profile, category);
@@ -61,7 +58,7 @@ public class ExpenseService {
         return toDTO(newExpense);
     }
 
-    // Retrieves all expenses for current month/based on the start date and end date
+    // Retrieves all expenses for the current month
     public List<ExpenseDTO> getCurrentMonthExpensesForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
         LocalDate now = LocalDate.now();
@@ -71,7 +68,7 @@ public class ExpenseService {
         return list.stream().map(this::toDTO).toList();
     }
 
-    //delete expense by id for current user
+    // Delete expense by id for current user
     public void deleteExpense(Long expenseId) {
         ProfileEntity profile = profileService.getCurrentProfile();
         ExpenseEntity entity = expenseRepository.findById(expenseId)
@@ -93,17 +90,22 @@ public class ExpenseService {
     public BigDecimal getTotalExpenseForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
         BigDecimal total = expenseRepository.findTotalExpenseByProfileId(profile.getId());
-        return total != null ? total: BigDecimal.ZERO;
+        return total != null ? total : BigDecimal.ZERO;
     }
 
-    //filter expenses
+    // Filter expenses — null dates default to full history (year 2000 to far future)
+    // Fixed: previously passed null directly to JPA BETWEEN query which caused NPE/500
     public List<ExpenseDTO> filterExpenses(LocalDateTime startDate, LocalDateTime endDate, String keyword, Sort sort) {
         ProfileEntity profile = profileService.getCurrentProfile();
-        List<ExpenseEntity> list = expenseRepository.findByProfileIdAndDateBetweenAndNameContainingIgnoreCase(profile.getId(), startDate, endDate, keyword, sort);
+        LocalDateTime start = startDate != null ? startDate : LocalDateTime.of(2000, 1, 1, 0, 0, 0);
+        LocalDateTime end   = endDate   != null ? endDate   : LocalDateTime.now().plusYears(10);
+        String kw = keyword != null ? keyword : "";
+        List<ExpenseEntity> list = expenseRepository.findByProfileIdAndDateBetweenAndNameContainingIgnoreCase(
+                profile.getId(), start, end, kw, sort);
         return list.stream().map(this::toDTO).toList();
     }
 
-    //Notifications
+    // Notifications
     public List<ExpenseDTO> getExpensesForUserOnDate(Long profileId, LocalDate date) {
         List<ExpenseEntity> list = expenseRepository.findByProfileIdAndDate(profileId, date);
         return list.stream().map(this::toDTO).toList();
@@ -114,7 +116,7 @@ public class ExpenseService {
         return list.stream().map(this::toDTO).toList();
     }
 
-    //helper methods
+    // Helper methods
     private ExpenseEntity toEntity(ExpenseDTO dto, ProfileEntity profile, CategoryEntity category) {
         return ExpenseEntity.builder()
                 .name(dto.getName())
@@ -131,8 +133,8 @@ public class ExpenseService {
                 .id(entity.getId())
                 .name(entity.getName())
                 .icon(entity.getIcon())
-                .categoryId(entity.getCategory() != null ? entity.getCategory().getId(): null)
-                .categoryName(entity.getCategory() != null ? entity.getCategory().getName(): "N/A")
+                .categoryId(entity.getCategory() != null ? entity.getCategory().getId() : null)
+                .categoryName(entity.getCategory() != null ? entity.getCategory().getName() : "N/A")
                 .amount(entity.getAmount())
                 .date(entity.getDate())
                 .createdAt(entity.getCreatedAt())
