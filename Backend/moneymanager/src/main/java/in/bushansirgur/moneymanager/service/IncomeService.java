@@ -12,6 +12,7 @@ import in.bushansirgur.moneymanager.repository.IncomeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -26,6 +27,7 @@ public class IncomeService {
     private final IncomeRepository incomeRepository;
     private final ProfileService profileService;
 
+    @Transactional
     public IncomeDTO addIncome(IncomeDTO dto) {
         ProfileEntity profile = profileService.getCurrentProfile();
 
@@ -51,6 +53,41 @@ public class IncomeService {
         return toDTO(newIncome);
     }
 
+    @Transactional
+    public IncomeDTO updateIncome(Long incomeId, IncomeDTO dto) {
+        ProfileEntity profile = profileService.getCurrentProfile();
+
+        IncomeEntity existing = incomeRepository.findById(incomeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Income", incomeId));
+
+        if (!existing.getProfile().getId().equals(profile.getId()))
+            throw new UnauthorizedException("update", "income");
+
+        if (dto.getName() != null && dto.getName().trim().isEmpty())
+            throw new ValidationException("name", "Income name cannot be empty");
+        if (dto.getAmount() != null && dto.getAmount().compareTo(BigDecimal.ZERO) <= 0)
+            throw new ValidationException("amount", "Amount must be greater than zero");
+
+        if (dto.getName() != null) existing.setName(dto.getName().trim());
+        if (dto.getAmount() != null) existing.setAmount(dto.getAmount());
+        if (dto.getDate() != null) existing.setDate(dto.getDate());
+        if (dto.getIcon() != null) existing.setIcon(dto.getIcon());
+
+        if (dto.getCategoryId() != null) {
+            CategoryEntity category = categoryRepository.findByIdAndProfileId(dto.getCategoryId(), profile.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Category with ID " + dto.getCategoryId() + " not found."));
+            if (category.getType() != null && !category.getType().equalsIgnoreCase("INCOME"))
+                throw new ValidationException("categoryId",
+                        "Category '" + category.getName() + "' is not an income category.");
+            existing.setCategory(category);
+        }
+
+        existing = incomeRepository.save(existing);
+        return toDTO(existing);
+    }
+
+    @Transactional(readOnly = true)
     public List<IncomeDTO> getCurrentMonthIncomesForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
         LocalDate now = LocalDate.now();
@@ -60,6 +97,7 @@ public class IncomeService {
                 .stream().map(this::toDTO).toList();
     }
 
+    @Transactional
     public void deleteIncome(Long incomeId) {
         ProfileEntity profile = profileService.getCurrentProfile();
         IncomeEntity entity = incomeRepository.findById(incomeId)
@@ -69,18 +107,21 @@ public class IncomeService {
         incomeRepository.delete(entity);
     }
 
+    @Transactional(readOnly = true)
     public List<IncomeDTO> getLatest5IncomesForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
         return incomeRepository.findTop5ByProfileIdOrderByDateDesc(profile.getId())
                 .stream().map(this::toDTO).toList();
     }
 
+    @Transactional(readOnly = true)
     public BigDecimal getTotalIncomeForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
         BigDecimal total = incomeRepository.findTotalExpenseByProfileId(profile.getId());
         return total != null ? total : BigDecimal.ZERO;
     }
 
+    @Transactional(readOnly = true)
     public List<IncomeDTO> filterIncomes(LocalDateTime startDate, LocalDateTime endDate, String keyword, Sort sort) {
         ProfileEntity profile = profileService.getCurrentProfile();
         LocalDateTime start = startDate != null ? startDate : LocalDateTime.of(2000, 1, 1, 0, 0, 0);
@@ -91,9 +132,7 @@ public class IncomeService {
                 .stream().map(this::toDTO).toList();
     }
 
-    // Added for NotificationService (scheduler).
-    // The scheduler runs outside a security context so it cannot call getCurrentProfile().
-    // This method takes profileId directly, mirroring ExpenseService.getExpensesForUserOnDateRange().
+    @Transactional(readOnly = true)
     public List<IncomeDTO> getIncomesForUserOnDateRange(Long profileId, LocalDateTime start, LocalDateTime end) {
         return incomeRepository.findByProfileIdAndDateBetween(profileId, start, end)
                 .stream().map(this::toDTO).toList();

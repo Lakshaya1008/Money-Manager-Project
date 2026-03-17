@@ -393,9 +393,11 @@ Authorization: Bearer <token>
 ```
 GET /excel/download/income
 GET /excel/download/expense
+GET /excel/download/full
 Authorization: Bearer <token>
 ```
 **Response**: Excel file download (.xlsx)
+- `/excel/download/full` returns a workbook with separate `Incomes` and `Expenses` sheets.
 
 ---
 

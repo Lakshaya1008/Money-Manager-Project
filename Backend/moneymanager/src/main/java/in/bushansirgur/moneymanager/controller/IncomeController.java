@@ -16,18 +16,22 @@ public class IncomeController {
 
     private final IncomeService incomeService;
 
-    // Fixed: was named addExpense() — renamed to addIncome()
     @PostMapping
     public ResponseEntity<IncomeDTO> addIncome(@RequestBody IncomeDTO dto) {
-        IncomeDTO saved = incomeService.addIncome(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        return ResponseEntity.status(HttpStatus.CREATED).body(incomeService.addIncome(dto));
     }
 
-    // Fixed: was named getExpenses() — renamed to getIncomes()
     @GetMapping
     public ResponseEntity<List<IncomeDTO>> getIncomes() {
-        List<IncomeDTO> incomes = incomeService.getCurrentMonthIncomesForCurrentUser();
-        return ResponseEntity.ok(incomes);
+        return ResponseEntity.ok(incomeService.getCurrentMonthIncomesForCurrentUser());
+    }
+
+    // NEW — edit an existing income record
+    // Only fields provided in the request body are updated (partial update).
+    // Returns the updated income so the frontend can refresh the list without a full reload.
+    @PutMapping("/{id}")
+    public ResponseEntity<IncomeDTO> updateIncome(@PathVariable Long id, @RequestBody IncomeDTO dto) {
+        return ResponseEntity.ok(incomeService.updateIncome(id, dto));
     }
 
     @DeleteMapping("/{id}")

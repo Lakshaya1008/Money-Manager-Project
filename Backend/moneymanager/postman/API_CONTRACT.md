@@ -1421,6 +1421,53 @@ Content-Disposition: attachment; filename=expense.xlsx
 
 ---
 
+### 9.3 Download Full Excel Report
+
+Download a combined Excel file with separate `Incomes` and `Expenses` sheets.
+
+| Property | Value |
+|----------|-------|
+| **Method** | `GET` |
+| **URL** | `/excel/download/full` |
+| **Auth Required** | ✅ Yes |
+| **Response Type** | Binary (file download) |
+
+**Optional Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `startDate` | ISO datetime | No | Filter transactions from this date-time |
+| `endDate` | ISO datetime | No | Filter transactions up to this date-time |
+| `keyword` | string | No | Filter by transaction name |
+
+**Response Headers:**
+```
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+Content-Disposition: attachment; filename=full_report_<from>_to_<to>.xlsx
+```
+
+**Frontend Example:**
+```javascript
+const downloadFullExcel = async (params = {}) => {
+  const token = localStorage.getItem('token');
+  const response = await axios.get(`${BASE_URL}/excel/download/full`, {
+    headers: { Authorization: `Bearer ${token}` },
+    params,
+    responseType: 'blob'
+  });
+
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', 'full_report.xlsx');
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+```
+
+---
+
 ## 10. Error Handling
 
 ### Standard Error Response Format
@@ -1849,6 +1896,18 @@ export const excelService = {
     });
     downloadBlob(response.data, 'expense.xlsx');
   },
+
+  downloadFullReport: async (params?: {
+    startDate?: string;
+    endDate?: string;
+    keyword?: string;
+  }) => {
+    const response = await apiClient.get('/excel/download/full', {
+      params,
+      responseType: 'blob',
+    });
+    downloadBlob(response.data, 'full_report.xlsx');
+  },
 };
 
 // Helper function for downloading blobs
@@ -1906,6 +1965,7 @@ VITE_API_URL=https://money-manager-project-1-6m2s.onrender.com/api/v1.0
 | `GET` | `/email/test` | ✅ | Send test email |
 | `GET` | `/excel/download/income` | ✅ | Download income Excel |
 | `GET` | `/excel/download/expense` | ✅ | Download expense Excel |
+| `GET` | `/excel/download/full` | ✅ | Download full Excel report |
 
 ---
 

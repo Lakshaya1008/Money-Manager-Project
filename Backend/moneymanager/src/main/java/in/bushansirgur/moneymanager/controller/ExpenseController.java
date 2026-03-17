@@ -18,14 +18,20 @@ public class ExpenseController {
 
     @PostMapping
     public ResponseEntity<ExpenseDTO> addExpense(@RequestBody ExpenseDTO dto) {
-        ExpenseDTO saved = expenseService.addExpense(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        return ResponseEntity.status(HttpStatus.CREATED).body(expenseService.addExpense(dto));
     }
 
     @GetMapping
     public ResponseEntity<List<ExpenseDTO>> getExpenses() {
-        List<ExpenseDTO> expenses = expenseService.getCurrentMonthExpensesForCurrentUser();
-        return ResponseEntity.ok(expenses);
+        return ResponseEntity.ok(expenseService.getCurrentMonthExpensesForCurrentUser());
+    }
+
+    // NEW — edit an existing expense record
+    // Only fields provided in the request body are updated (partial update).
+    // Returns the updated expense so the frontend can refresh the list without a full reload.
+    @PutMapping("/{id}")
+    public ResponseEntity<ExpenseDTO> updateExpense(@PathVariable Long id, @RequestBody ExpenseDTO dto) {
+        return ResponseEntity.ok(expenseService.updateExpense(id, dto));
     }
 
     @DeleteMapping("/{id}")
