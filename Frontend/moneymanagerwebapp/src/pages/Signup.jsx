@@ -1,19 +1,23 @@
-import {useState} from "react";
-import {Link, useNavigate} from "react-router-dom";
-import {assets} from "../assets/assets.js";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { assets } from "../assets/assets.js";
 import Input from "../components/Input.jsx";
-import {validateEmail} from "../util/validation.js";
+import { validateEmail } from "../util/validation.js";
 import axiosConfig from "../util/axiosConfig.jsx";
-import {API_ENDPOINTS} from "../util/apiEndpoints.js";
+import { API_ENDPOINTS } from "../util/apiEndpoints.js";
 import toast from "react-hot-toast";
-import {LoaderCircle} from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import ProfilePhotoSelector from "../components/ProfilePhotoSelector.jsx";
 import uploadProfileImage from "../util/uploadProfileImage.js";
 import Header from "../components/Header.jsx";
 
 const Signup = () => {
-    const [firstName, setFirstName] = useState("");
-    const [lastName, setLastName] = useState("");
+    // FIXED: replaced separate firstName + lastName fields with a single fullName field.
+    // The two-field approach was fragile — "Mary Jane Watson" saved as firstName="Mary",
+    // lastName="Jane Watson" on signup but split back as firstName="Mary", lastName="Jane"
+    // on the Profile page edit modal, losing "Watson". A single fullName field works
+    // correctly for all name formats including single names, hyphenated names, etc.
+    const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState(null);
@@ -23,17 +27,10 @@ const Signup = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        let profileImageUrl = "";
         setIsLoading(true);
 
-        // Basic validation
-        if (!firstName.trim()) {
-            setError("Please enter your first name");
-            setIsLoading(false);
-            return;
-        }
-        if (!lastName.trim()) {
-            setError("Please enter your last name");
+        if (!fullName.trim()) {
+            setError("Please enter your full name");
             setIsLoading(false);
             return;
         }
@@ -54,21 +51,16 @@ const Signup = () => {
         }
         setError("");
 
+        let profileImageUrl = "";
         try {
             if (profilePhoto) {
-                if (typeof profilePhoto === "string") {
-                    profileImageUrl = profilePhoto;
-                } else {
-                    const imageUrl = await uploadProfileImage(profilePhoto);
-                    profileImageUrl = imageUrl || "";
-                }
+                profileImageUrl = typeof profilePhoto === "string"
+                    ? profilePhoto
+                    : (await uploadProfileImage(profilePhoto)) || "";
             }
 
-            // Join first + last name before sending to backend
-            const fullName = `${firstName.trim()} ${lastName.trim()}`;
-
             const response = await axiosConfig.post(API_ENDPOINTS.REGISTER, {
-                fullName,
+                fullName: fullName.trim(),
                 email: email.toLowerCase(),
                 password,
                 profileImageUrl,
@@ -89,7 +81,6 @@ const Signup = () => {
         <div className="h-screen w-full flex flex-col">
             <Header />
             <div className="flex-grow w-full relative flex items-center justify-center overflow-hidden">
-                {/* Background image with blur */}
                 <img
                     src={assets.login_bg}
                     alt="Background"
@@ -104,30 +95,16 @@ const Signup = () => {
                             Start tracking your spendings by joining with us.
                         </p>
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            {/* Profile photo / avatar selector */}
-                            <ProfilePhotoSelector
-                                image={profilePhoto}
-                                setImage={setProfilePhoto}
-                            />
+                            <ProfilePhotoSelector image={profilePhoto} setImage={setProfilePhoto} />
 
                             <div className="flex flex-col gap-4">
-                                {/* First Name & Last Name side by side */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Input
-                                        value={firstName}
-                                        onChange={(e) => setFirstName(e.target.value)}
-                                        label="First Name"
-                                        placeholder="John"
-                                        type="text"
-                                    />
-                                    <Input
-                                        value={lastName}
-                                        onChange={(e) => setLastName(e.target.value)}
-                                        label="Last Name"
-                                        placeholder="Doe"
-                                        type="text"
-                                    />
-                                </div>
+                                <Input
+                                    value={fullName}
+                                    onChange={(e) => setFullName(e.target.value)}
+                                    label="Full Name"
+                                    placeholder="e.g., John Doe"
+                                    type="text"
+                                />
                                 <Input
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
@@ -152,27 +129,17 @@ const Signup = () => {
 
                             <button
                                 disabled={isLoading}
-                                className={`btn-primary w-full py-3 text-lg font-medium flex items-center justify-center gap-2 ${
-                                    isLoading ? "opacity-60 cursor-not-allowed" : ""
-                                }`}
+                                className={`btn-primary w-full py-3 text-lg font-medium flex items-center justify-center gap-2 ${isLoading ? "opacity-60 cursor-not-allowed" : ""}`}
                                 type="submit"
                             >
-                                {isLoading ? (
-                                    <>
-                                        <LoaderCircle className="animate-spin w-5 h-5" />
-                                        Creating Account...
-                                    </>
-                                ) : (
-                                    "SIGN UP"
-                                )}
+                                {isLoading
+                                    ? <><LoaderCircle className="animate-spin w-5 h-5" /> Creating Account...</>
+                                    : "SIGN UP"}
                             </button>
 
                             <p className="text-sm text-center text-slate-700 mt-3">
                                 Already have an account?{" "}
-                                <Link
-                                    to="/login"
-                                    className="font-medium text-purple-900 underline hover:text-purple-700"
-                                >
+                                <Link to="/login" className="font-medium text-purple-900 underline hover:text-purple-700">
                                     Login
                                 </Link>
                             </p>

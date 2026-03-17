@@ -1,12 +1,12 @@
 import Dashboard from "../components/Dashboard.jsx";
-import {useUser} from "../hooks/useUser.jsx";
-import {Download, Search} from "lucide-react";
-import {useState} from "react";
+import { useUser } from "../hooks/useUser.jsx";
+import { Download, Search } from "lucide-react";
+import { useState } from "react";
 import axiosConfig from "../util/axiosConfig.jsx";
-import {API_ENDPOINTS} from "../util/apiEndpoints.js";
+import { API_ENDPOINTS } from "../util/apiEndpoints.js";
 import toast from "react-hot-toast";
 import TransactionInfoCard from "../components/TransactionInfoCard.jsx";
-import moment from "moment";
+import { formatDate } from "../util/util.js";
 
 const Filter = () => {
     useUser();
@@ -25,13 +25,9 @@ const Filter = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            // Fixed: don't send empty string for dates — only include keys when they have values.
-            // Empty strings pass through FlexibleLocalDateTimeDeserializer as null which works,
-            // but omitting them entirely is cleaner and more correct.
-            const body = {type, keyword, sortField, sortOrder};
+            const body = { type, keyword, sortField, sortOrder };
             if (startDate) body.startDate = startDate;
             if (endDate) body.endDate = endDate;
-
             const response = await axiosConfig.post(API_ENDPOINTS.APPLY_FILTERS, body);
             setTransactions(response.data);
             setAppliedType(type);
@@ -42,24 +38,15 @@ const Filter = () => {
         }
     };
 
-    // Helper: parse a real error message from a Blob response.
-    // When responseType:"blob", axios wraps error bodies as Blobs too —
-    // reading .message directly returns undefined.
     const parseBlobError = async (error) => {
         if (error.response?.data instanceof Blob) {
             try {
-                const text = await error.response.data.text();
-                const json = JSON.parse(text);
-                return json.message || "Failed to download report";
-            } catch {
-                return "Failed to download report";
-            }
+                return JSON.parse(await error.response.data.text()).message || "Failed to download report";
+            } catch { return "Failed to download report"; }
         }
         return error.response?.data?.message || "Failed to download report";
     };
 
-    // Downloads exactly what the user sees — same type + same applied filters.
-    // Only shown after the user has run a search and has results.
     const handleDownloadFiltered = async () => {
         setDownloadLoading(true);
         try {
@@ -68,25 +55,18 @@ const Filter = () => {
             if (endDate) params.endDate = `${endDate}T23:59:59`;
             if (keyword) params.keyword = keyword;
 
-            const response = await axiosConfig.get(API_ENDPOINTS.DOWNLOAD_FILTERED_REPORT, {
-                params,
-                responseType: "blob",
-            });
-
+            const response = await axiosConfig.get(API_ENDPOINTS.DOWNLOAD_FILTERED_REPORT, { params, responseType: "blob" });
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement("a");
             link.href = url;
-            const from = startDate || "all";
-            const to = endDate || "today";
-            link.setAttribute("download", `${appliedType}_filtered_${from}_to_${to}.xlsx`);
+            link.setAttribute("download", `${appliedType}_filtered_${startDate || "all"}_to_${endDate || "today"}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
             toast.success("Filtered results downloaded!");
         } catch (error) {
-            const message = await parseBlobError(error);
-            toast.error(message);
+            toast.error(await parseBlobError(error));
         } finally {
             setDownloadLoading(false);
         }
@@ -100,28 +80,18 @@ const Filter = () => {
             if (endDate) params.endDate = `${endDate}T23:59:59`;
             if (keyword) params.keyword = keyword;
 
-            const response = await axiosConfig.get(API_ENDPOINTS.DOWNLOAD_FULL_REPORT, {
-                params,
-                responseType: "blob",
-            });
-
+            const response = await axiosConfig.get(API_ENDPOINTS.DOWNLOAD_FULL_REPORT, { params, responseType: "blob" });
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement("a");
             link.href = url;
-
-            const from = startDate || "all";
-            const to = endDate || "today";
-            link.setAttribute("download", `full_report_${from}_to_${to}.xlsx`);
-
+            link.setAttribute("download", `full_report_${startDate || "all"}_to_${endDate || "today"}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
             toast.success("Full report downloaded!");
         } catch (error) {
-            // Fixed: parse blob error correctly instead of reading .message on a Blob object
-            const message = await parseBlobError(error);
-            toast.error(message);
+            toast.error(await parseBlobError(error));
         } finally {
             setDownloadLoading(false);
         }
@@ -132,7 +102,6 @@ const Filter = () => {
             <div className="my-5 mx-auto">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-2xl font-semibold">Filter Transactions</h2>
-
                     <button
                         onClick={handleDownloadFullReport}
                         disabled={downloadLoading}
@@ -144,10 +113,7 @@ const Filter = () => {
                 </div>
 
                 <div className="card p-4 mb-4">
-                    <div className="flex items-center justify-between mb-4">
-                        <h5 className="text-lg font-semibold">Select the filters</h5>
-                    </div>
-
+                    <h5 className="text-lg font-semibold mb-4">Select the filters</h5>
                     <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-4">
                         <div>
                             <label className="block text-sm font-medium mb-1" htmlFor="type">Type</label>
@@ -196,9 +162,10 @@ const Filter = () => {
                         <h5 className="text-lg font-semibold">Transactions</h5>
                         <div className="flex items-center gap-3">
                             {transactions.length > 0 && (
-                                <span className="text-sm text-gray-500">{transactions.length} result{transactions.length !== 1 ? "s" : ""}</span>
+                                <span className="text-sm text-gray-500">
+                                    {transactions.length} result{transactions.length !== 1 ? "s" : ""}
+                                </span>
                             )}
-                            {/* Download Results button — only shown when there are results on screen */}
                             {transactions.length > 0 && (
                                 <button
                                     onClick={handleDownloadFiltered}
@@ -215,15 +182,13 @@ const Filter = () => {
                     {!loading && transactions.length === 0 && (
                         <p className="text-gray-500">Select the filters and click apply to filter the transactions</p>
                     )}
-                    {loading && (
-                        <p className="text-gray-500">Loading Transactions...</p>
-                    )}
+                    {loading && <p className="text-gray-500">Loading Transactions...</p>}
                     {!loading && transactions.map((transaction) => (
                         <TransactionInfoCard
                             key={transaction.id}
                             title={transaction.name}
                             icon={transaction.icon}
-                            date={moment(transaction.date).format("Do MMM YYYY")}
+                            date={formatDate(transaction.date)}
                             amount={transaction.amount}
                             type={appliedType}
                             hideDeleteBtn

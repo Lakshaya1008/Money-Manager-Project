@@ -9,8 +9,8 @@ export const API_ENDPOINTS = {
     RESET_PASSWORD:     `${BASE_URL}/reset-password`,
 
     // ─── Profile (protected) ────────────────────────────────────────
-    GET_USER_INFO:      `${BASE_URL}/profile`,      // GET  — fetch current user
-    UPDATE_PROFILE:     `${BASE_URL}/profile`,      // PUT  — update name/photo
+    GET_USER_INFO:      `${BASE_URL}/profile`,
+    UPDATE_PROFILE:     `${BASE_URL}/profile`,
     UPDATE_NAME:        `${BASE_URL}/profile/update-name`,
     CHANGE_PASSWORD:    `${BASE_URL}/profile/change-password`,
 
@@ -24,11 +24,13 @@ export const API_ENDPOINTS = {
     // ─── Income ─────────────────────────────────────────────────────
     GET_ALL_INCOME:  `${BASE_URL}/incomes`,
     ADD_INCOME:      `${BASE_URL}/incomes`,
+    UPDATE_INCOME:   (id) => `${BASE_URL}/incomes/${id}`,   // NEW
     DELETE_INCOME:   (id) => `${BASE_URL}/incomes/${id}`,
 
     // ─── Expense ────────────────────────────────────────────────────
     GET_ALL_EXPENSE: `${BASE_URL}/expenses`,
     ADD_EXPENSE:     `${BASE_URL}/expenses`,
+    UPDATE_EXPENSE:  (id) => `${BASE_URL}/expenses/${id}`,  // NEW
     DELETE_EXPENSE:  (id) => `${BASE_URL}/expenses/${id}`,
 
     // ─── Dashboard ──────────────────────────────────────────────────

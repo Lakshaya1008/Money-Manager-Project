@@ -3,6 +3,7 @@ import Dashboard from "../components/Dashboard.jsx";
 import ExpenseOverview from "../components/ExpenseOverview.jsx";
 import ExpenseList from "../components/ExpenseList.jsx";
 import AddExpenseForm from "../components/AddExpenseForm.jsx";
+import EditExpenseForm from "../components/EditExpenseForm.jsx";
 import DeleteAlert from "../components/DeleteAlert.jsx";
 import axiosConfig from "../util/axiosConfig.jsx";
 import { API_ENDPOINTS } from "../util/apiEndpoints.js";
@@ -17,8 +18,7 @@ const Expense = () => {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
     const [openAddModal, setOpenAddModal] = useState(false);
-
-    // Delete confirmation state — stores the expense record pending deletion
+    const [editModal, setEditModal] = useState({ show: false, expense: null });
     const [deleteAlert, setDeleteAlert] = useState({ show: false, expense: null });
 
     const fetchExpenseData = async () => {
@@ -36,13 +36,9 @@ const Expense = () => {
 
     const fetchCategories = async () => {
         try {
-            const response = await axiosConfig.get(
-                API_ENDPOINTS.GET_CATEGORY_BY_TYPE("EXPENSE")
-            );
+            const response = await axiosConfig.get(API_ENDPOINTS.GET_CATEGORY_BY_TYPE("EXPENSE"));
             setCategories(response.data || []);
-        } catch {
-            // Silent
-        }
+        } catch { /* silent */ }
     };
 
     useEffect(() => {
@@ -54,16 +50,14 @@ const Expense = () => {
         if (!expense.name?.trim()) { toast.error("Expense name is required"); return false; }
         if (!expense.amount || Number(expense.amount) <= 0) { toast.error("Amount must be greater than zero"); return false; }
         if (!expense.categoryId) { toast.error("Please select a category"); return false; }
-
         try {
-            const payload = {
+            await axiosConfig.post(API_ENDPOINTS.ADD_EXPENSE, {
                 name: expense.name.trim(),
                 amount: expense.amount,
                 categoryId: expense.categoryId,
                 icon: expense.icon || null,
                 ...(expense.date && { date: expense.date }),
-            };
-            await axiosConfig.post(API_ENDPOINTS.ADD_EXPENSE, payload);
+            });
             setOpenAddModal(false);
             fetchExpenseData();
             toast.success("Expense added successfully!");
@@ -74,11 +68,22 @@ const Expense = () => {
         }
     };
 
-    // Fix: was called directly from TransactionInfoCard — now opens a confirmation modal first.
-    // The actual deletion only fires if the user clicks "Delete" in the modal.
+    const handleEditExpense = async (updatedData) => {
+        if (!updatedData.name?.trim()) { toast.error("Expense name is required"); return; }
+        if (!updatedData.amount || Number(updatedData.amount) <= 0) { toast.error("Amount must be greater than zero"); return; }
+        if (!updatedData.categoryId) { toast.error("Please select a category"); return; }
+        try {
+            await axiosConfig.put(API_ENDPOINTS.UPDATE_EXPENSE(editModal.expense.id), updatedData);
+            setEditModal({ show: false, expense: null });
+            fetchExpenseData();
+            toast.success("Expense updated successfully!");
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to update expense");
+        }
+    };
+
     const confirmDeleteExpense = (expenseId) => {
-        const expense = expenseData.find(e => e.id === expenseId);
-        setDeleteAlert({ show: true, expense });
+        setDeleteAlert({ show: true, expense: expenseData.find((e) => e.id === expenseId) });
     };
 
     const executeDeleteExpense = async () => {
@@ -108,8 +113,7 @@ const Expense = () => {
         } catch (error) {
             if (error.response?.data instanceof Blob) {
                 try {
-                    const text = await error.response.data.text();
-                    const json = JSON.parse(text);
+                    const json = JSON.parse(await error.response.data.text());
                     toast.error(json.message || "Failed to download report");
                 } catch { toast.error("Failed to download report"); }
             } else {
@@ -131,25 +135,33 @@ const Expense = () => {
         <Dashboard activeMenu="Expense">
             <div className="my-5 mx-auto">
                 <div className="grid grid-cols-1 gap-6">
-                    <ExpenseOverview
-                        transactions={expenseData}
-                        onExpenseIncome={() => setOpenAddModal(true)}
-                    />
+                    <ExpenseOverview transactions={expenseData} onExpenseIncome={() => setOpenAddModal(true)} />
 
                     <ExpenseList
                         transactions={expenseData}
                         onDelete={confirmDeleteExpense}
+                        onEdit={(expense) => setEditModal({ show: true, expense })}
                         onDownload={handleDownloadExcel}
                         onEmail={handleEmailReport}
                         onAdd={() => setOpenAddModal(true)}
                     />
 
-                    {/* Add Expense Modal */}
                     <Modal isOpen={openAddModal} onClose={() => setOpenAddModal(false)} title="Add Expense">
                         <AddExpenseForm onAddExpense={handleAddExpense} categories={categories} />
                     </Modal>
 
-                    {/* Delete Confirmation Modal */}
+                    <Modal
+                        isOpen={editModal.show}
+                        onClose={() => setEditModal({ show: false, expense: null })}
+                        title="Edit Expense"
+                    >
+                        <EditExpenseForm
+                            expense={editModal.expense}
+                            onSave={handleEditExpense}
+                            categories={categories}
+                        />
+                    </Modal>
+
                     <Modal
                         isOpen={deleteAlert.show}
                         onClose={() => setDeleteAlert({ show: false, expense: null })}

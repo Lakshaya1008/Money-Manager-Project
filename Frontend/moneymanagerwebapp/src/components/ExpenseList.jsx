@@ -1,9 +1,9 @@
-import moment from "moment";
-import {Download, LoaderCircle, Mail, Plus} from "lucide-react";
+import { Download, LoaderCircle, Mail, Plus } from "lucide-react";
 import TransactionInfoCard from "./TransactionInfoCard.jsx";
-import {useState} from "react";
+import { currentMonthLabel, formatDate } from "../util/util.js";
+import { useState } from "react";
 
-const ExpenseList = ({transactions, onDelete, onDownload, onEmail, onAdd}) => {
+const ExpenseList = ({ transactions, onDelete, onEdit, onDownload, onEmail, onAdd }) => {
     const [emailLoading, setEmailLoading] = useState(false);
     const [downloadLoading, setDownloadLoading] = useState(false);
 
@@ -17,9 +17,7 @@ const ExpenseList = ({transactions, onDelete, onDownload, onEmail, onAdd}) => {
         try { await onDownload(); } finally { setDownloadLoading(false); }
     };
 
-    // Fix: heading was "All Expenses" but the endpoint only returns the current month.
-    // Showing the month name makes it clear why data "disappears" when the month changes.
-    const monthLabel = moment().format("MMMM YYYY");
+    const monthLabel = currentMonthLabel();
 
     return (
         <div className="card">
@@ -33,23 +31,18 @@ const ExpenseList = ({transactions, onDelete, onDownload, onEmail, onAdd}) => {
                 </div>
                 <div className="flex items-center justify-end gap-2">
                     <button disabled={emailLoading || downloadLoading} className="card-btn" onClick={handleEmail}>
-                        {emailLoading ? (
-                            <><LoaderCircle className="w-4 h-4 animate-spin" /> Emailing...</>
-                        ) : (
-                            <><Mail size={15} className="text-base" /> Email</>
-                        )}
+                        {emailLoading
+                            ? <><LoaderCircle className="w-4 h-4 animate-spin" /> Emailing...</>
+                            : <><Mail size={15} className="text-base" /> Email</>}
                     </button>
                     <button disabled={emailLoading || downloadLoading} className="card-btn" onClick={handleDownload}>
-                        {downloadLoading ? (
-                            <><LoaderCircle className="w-4 h-4 animate-spin" /> Downloading...</>
-                        ) : (
-                            <><Download size={15} className="text-base" /> Download</>
-                        )}
+                        {downloadLoading
+                            ? <><LoaderCircle className="w-4 h-4 animate-spin" /> Downloading...</>
+                            : <><Download size={15} className="text-base" /> Download</>}
                     </button>
                 </div>
             </div>
 
-            {/* Fix: empty state — previously showed a blank card with no guidance */}
             {transactions?.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                     <p className="text-gray-400 text-sm mb-3">No expenses recorded for {monthLabel} yet.</p>
@@ -66,10 +59,11 @@ const ExpenseList = ({transactions, onDelete, onDownload, onEmail, onAdd}) => {
                             key={expense.id}
                             title={expense.name}
                             icon={expense.icon}
-                            date={moment(expense.date).format("Do MMM YYYY")}
+                            date={formatDate(expense.date)}
                             amount={expense.amount}
                             type="expense"
                             onDelete={() => onDelete(expense.id)}
+                            onEdit={onEdit ? () => onEdit(expense) : undefined}
                         />
                     ))}
                 </div>

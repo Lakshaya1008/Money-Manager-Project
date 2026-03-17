@@ -8,17 +8,11 @@ import toast from "react-hot-toast";
 import { LoaderCircle, Mail, Calendar, User, Lock, Pencil, X } from "lucide-react";
 import ProfilePhotoSelector from "../components/ProfilePhotoSelector.jsx";
 import uploadProfileImage from "../util/uploadProfileImage.js";
-import moment from "moment";
+import { formatDateFull } from "../util/util.js";
 
-const splitFullName = (fullName = "") => {
-    const parts = fullName.trim().split(" ");
-    return { firstName: parts[0] || "", lastName: parts.slice(1).join(" ") || "" };
-};
-
-// ── Reusable Modal ─────────────────────────────────────────────────────────
+// Local modal — simpler than the shared Modal component, used only on this page
 const Modal = ({ title, onClose, children }) => (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-        {/* backdrop */}
         <div className="absolute inset-0 bg-black/40" onClick={onClose} />
         <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
             <div className="flex items-center justify-between mb-5">
@@ -36,11 +30,10 @@ const Profile = () => {
     useUser();
     const { user, updateUser } = useContext(AppContext);
 
-    // which modal is open: null | "photo" | "name" | "password"
-    const [modal, setModal] = useState(null);
+    const [modal, setModal] = useState(null); // null | "photo" | "name" | "password"
     const closeModal = () => setModal(null);
 
-    // ── Photo state ────────────────────────────────────────────────
+    // ── Photo ──────────────────────────────────────────────────────────────
     const [profilePhoto, setProfilePhoto] = useState(null);
     const [photoLoading, setPhotoLoading] = useState(false);
 
@@ -49,13 +42,9 @@ const Profile = () => {
         if (!profilePhoto) return;
         setPhotoLoading(true);
         try {
-            let profileImageUrl = user?.profileImageUrl || "";
-            if (typeof profilePhoto === "string") {
-                profileImageUrl = profilePhoto;
-            } else {
-                const uploaded = await uploadProfileImage(profilePhoto);
-                if (uploaded) profileImageUrl = uploaded;
-            }
+            const profileImageUrl = typeof profilePhoto === "string"
+                ? profilePhoto
+                : ((await uploadProfileImage(profilePhoto)) || user?.profileImageUrl || "");
             const response = await axiosConfig.put(API_ENDPOINTS.UPDATE_PROFILE, {
                 fullName: user?.fullName,
                 profileImageUrl,
@@ -73,29 +62,28 @@ const Profile = () => {
         }
     };
 
-    // ── Name state ─────────────────────────────────────────────────
-    const { firstName: initFirst, lastName: initLast } = splitFullName(user?.fullName);
-    const [firstName, setFirstName] = useState(initFirst);
-    const [lastName, setLastName] = useState(initLast);
+    // ── Name — single fullName field ───────────────────────────────────────
+    // FIXED: replaced fragile firstName + lastName split with a single fullName field.
+    // The split was breaking single-word names ("Madonna" → lastName required but empty)
+    // and multi-part names ("Mary Jane Watson" → lost "Watson" on save).
+    // FIXED: replaced moment(user.createdAt).format("DD MMM YYYY") with formatDateFull()
+    // from util.js — eliminates the moment.js dependency on this page.
+    const [fullName, setFullName] = useState(user?.fullName || "");
     const [nameLoading, setNameLoading] = useState(false);
 
     const openNameModal = () => {
-        const { firstName: f, lastName: l } = splitFullName(user?.fullName);
-        setFirstName(f);
-        setLastName(l);
+        setFullName(user?.fullName || "");
         setModal("name");
     };
 
     const handleSaveName = async (e) => {
         e.preventDefault();
-        if (!firstName.trim()) { toast.error("First name cannot be empty"); return; }
-        if (!lastName.trim())  { toast.error("Last name cannot be empty"); return; }
+        if (!fullName.trim()) { toast.error("Name cannot be empty"); return; }
         setNameLoading(true);
         try {
-            const fullName = `${firstName.trim()} ${lastName.trim()}`;
-            const response = await axiosConfig.put(API_ENDPOINTS.UPDATE_NAME, { fullName });
+            const response = await axiosConfig.put(API_ENDPOINTS.UPDATE_NAME, { fullName: fullName.trim() });
             if (response.status === 200) {
-                updateUser({ ...user, fullName });
+                updateUser({ ...user, fullName: fullName.trim() });
                 toast.success("Name updated successfully!");
                 closeModal();
             }
@@ -106,7 +94,7 @@ const Profile = () => {
         }
     };
 
-    // ── Password state ─────────────────────────────────────────────
+    // ── Password ───────────────────────────────────────────────────────────
     const [oldPassword, setOldPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -119,9 +107,9 @@ const Profile = () => {
 
     const handleChangePassword = async (e) => {
         e.preventDefault();
-        if (!oldPassword.trim())           { toast.error("Please enter your current password"); return; }
-        if (newPassword.length < 6)        { toast.error("New password must be at least 6 characters"); return; }
-        if (newPassword !== confirmPassword){ toast.error("Passwords do not match"); return; }
+        if (!oldPassword.trim())            { toast.error("Please enter your current password"); return; }
+        if (newPassword.length < 6)         { toast.error("New password must be at least 6 characters"); return; }
+        if (newPassword !== confirmPassword) { toast.error("Passwords do not match"); return; }
         setPasswordLoading(true);
         try {
             const response = await axiosConfig.put(API_ENDPOINTS.CHANGE_PASSWORD, { oldPassword, newPassword });
@@ -136,7 +124,6 @@ const Profile = () => {
         }
     };
 
-    // ── Shared input style ─────────────────────────────────────────
     const inputClass = "w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent";
 
     return (
@@ -144,9 +131,8 @@ const Profile = () => {
             <div className="my-5 mx-auto max-w-2xl space-y-5">
                 <h2 className="text-2xl font-semibold">My Profile</h2>
 
-                {/* ── Profile Card ───────────────────────────────── */}
                 <div className="card flex flex-col items-center gap-4 py-8">
-                    {/* Avatar — click to change */}
+                    {/* Avatar */}
                     <div className="relative group cursor-pointer" onClick={() => setModal("photo")}>
                         <img
                             src={user?.profileImageUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${user?.fullName}`}
@@ -158,19 +144,13 @@ const Profile = () => {
                         </div>
                     </div>
 
-                    {/* Name + edit button */}
                     <div className="flex items-center gap-2">
                         <p className="text-xl font-semibold text-gray-800">{user?.fullName}</p>
-                        <button
-                            onClick={openNameModal}
-                            className="text-gray-400 hover:text-purple-600 transition-colors cursor-pointer"
-                            title="Edit name"
-                        >
+                        <button onClick={openNameModal} className="text-gray-400 hover:text-purple-600 transition-colors cursor-pointer" title="Edit name">
                             <Pencil size={15} />
                         </button>
                     </div>
 
-                    {/* Info row */}
                     <div className="flex flex-wrap justify-center gap-4 w-full mt-1">
                         <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 rounded-lg">
                             <Mail size={15} className="text-gray-400" />
@@ -184,41 +164,31 @@ const Profile = () => {
                             <div>
                                 <p className="text-xs text-gray-400">Member Since</p>
                                 <p className="text-sm font-medium text-gray-700">
-                                    {user?.createdAt ? moment(user.createdAt).format("DD MMM YYYY") : "—"}
+                                    {formatDateFull(user?.createdAt)}
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Change password button */}
                     <button
                         onClick={openPasswordModal}
                         className="flex items-center gap-2 text-sm text-purple-700 bg-purple-50 border border-purple-100 px-4 py-2 rounded-lg hover:bg-purple-100 transition-colors cursor-pointer mt-1"
                     >
-                        <Lock size={14} />
-                        Change Password
+                        <Lock size={14} /> Change Password
                     </button>
                 </div>
             </div>
 
-            {/* ── Modal: Change Photo ──────────────────────────────── */}
+            {/* Modal: Change Photo */}
             {modal === "photo" && (
                 <Modal title="Update Profile Photo" onClose={closeModal}>
                     <form onSubmit={handleSavePhoto} className="space-y-5">
                         <div className="flex justify-center">
-                            <ProfilePhotoSelector
-                                image={profilePhoto}
-                                setImage={setProfilePhoto}
-                                currentImageUrl={user?.profileImageUrl}
-                            />
+                            <ProfilePhotoSelector image={profilePhoto} setImage={setProfilePhoto} currentImageUrl={user?.profileImageUrl} />
                         </div>
                         <div className="flex justify-end gap-2">
-                            <button type="button" onClick={closeModal}
-                                    className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                Cancel
-                            </button>
-                            <button type="submit" disabled={!profilePhoto || photoLoading}
-                                    className={`add-btn px-6 flex items-center gap-2 ${!profilePhoto || photoLoading ? "opacity-50 cursor-not-allowed" : ""}`}>
+                            <button type="button" onClick={closeModal} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">Cancel</button>
+                            <button type="submit" disabled={!profilePhoto || photoLoading} className={`add-btn px-6 flex items-center gap-2 ${!profilePhoto || photoLoading ? "opacity-50 cursor-not-allowed" : ""}`}>
                                 {photoLoading ? <><LoaderCircle size={15} className="animate-spin" /> Saving...</> : "Save Photo"}
                             </button>
                         </div>
@@ -226,35 +196,21 @@ const Profile = () => {
                 </Modal>
             )}
 
-            {/* ── Modal: Update Name ───────────────────────────────── */}
+            {/* Modal: Update Name — single fullName field */}
             {modal === "name" && (
                 <Modal title="Update Name" onClose={closeModal}>
                     <form onSubmit={handleSaveName} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">First Name</label>
-                                <div className="relative">
-                                    <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                    <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)}
-                                           className={inputClass} placeholder="John" />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Last Name</label>
-                                <div className="relative">
-                                    <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                    <input type="text" value={lastName} onChange={e => setLastName(e.target.value)}
-                                           className={inputClass} placeholder="Doe" />
-                                </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+                            <div className="relative">
+                                <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)}
+                                       className={inputClass} placeholder="e.g., John Doe" />
                             </div>
                         </div>
                         <div className="flex justify-end gap-2 pt-1">
-                            <button type="button" onClick={closeModal}
-                                    className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                Cancel
-                            </button>
-                            <button type="submit" disabled={nameLoading}
-                                    className={`add-btn px-6 flex items-center gap-2 ${nameLoading ? "opacity-60 cursor-not-allowed" : ""}`}>
+                            <button type="button" onClick={closeModal} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">Cancel</button>
+                            <button type="submit" disabled={nameLoading} className={`add-btn px-6 flex items-center gap-2 ${nameLoading ? "opacity-60 cursor-not-allowed" : ""}`}>
                                 {nameLoading ? <><LoaderCircle size={15} className="animate-spin" /> Saving...</> : "Save Name"}
                             </button>
                         </div>
@@ -262,48 +218,32 @@ const Profile = () => {
                 </Modal>
             )}
 
-            {/* ── Modal: Change Password ───────────────────────────── */}
+            {/* Modal: Change Password */}
             {modal === "password" && (
                 <Modal title="Change Password" onClose={closeModal}>
                     <form onSubmit={handleChangePassword} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Current Password</label>
-                            <div className="relative">
-                                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input type="password" value={oldPassword} onChange={e => setOldPassword(e.target.value)}
-                                       className={inputClass} placeholder="Your current password" />
+                        {[
+                            { label: "Current Password", value: oldPassword, setter: setOldPassword, placeholder: "Your current password" },
+                            { label: "New Password",     value: newPassword, setter: setNewPassword, placeholder: "Min. 6 characters" },
+                            { label: "Confirm New Password", value: confirmPassword, setter: setConfirmPassword, placeholder: "Repeat new password" },
+                        ].map(({ label, value, setter, placeholder }) => (
+                            <div key={label}>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
+                                <div className="relative">
+                                    <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input type="password" value={value} onChange={(e) => setter(e.target.value)} className={inputClass} placeholder={placeholder} />
+                                </div>
                             </div>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
-                            <div className="relative">
-                                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                                       className={inputClass} placeholder="Min. 6 characters" />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm New Password</label>
-                            <div className="relative">
-                                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
-                                       className={inputClass} placeholder="Repeat new password" />
-                            </div>
-                        </div>
+                        ))}
                         <div className="flex justify-end gap-2 pt-1">
-                            <button type="button" onClick={closeModal}
-                                    className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                Cancel
-                            </button>
-                            <button type="submit" disabled={passwordLoading}
-                                    className={`add-btn px-6 flex items-center gap-2 ${passwordLoading ? "opacity-60 cursor-not-allowed" : ""}`}>
+                            <button type="button" onClick={closeModal} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">Cancel</button>
+                            <button type="submit" disabled={passwordLoading} className={`add-btn px-6 flex items-center gap-2 ${passwordLoading ? "opacity-60 cursor-not-allowed" : ""}`}>
                                 {passwordLoading ? <><LoaderCircle size={15} className="animate-spin" /> Changing...</> : "Change Password"}
                             </button>
                         </div>
                     </form>
                 </Modal>
             )}
-
         </Dashboard>
     );
 };
