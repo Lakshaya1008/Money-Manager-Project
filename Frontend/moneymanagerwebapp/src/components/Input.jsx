@@ -18,6 +18,7 @@ const Input = ({label, value, onChange, placeholder, type, isSelect, options, na
                         className="w-full bg-transparent outline-none border border-gray-300 rounded-md py-2 px-3 text-gray-700 leading focus:outline-none focus:border-blue-500"
                         value={value}
                         onChange={(e) => onChange(e)}
+                        name={name}
                     >
                         {options.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -33,7 +34,8 @@ const Input = ({label, value, onChange, placeholder, type, isSelect, options, na
                         value={value}
                         onChange={(e) => onChange(e)}
                         name={name}
-                        autoComplete={autoComplete} />
+                        autoComplete={autoComplete}
+                    />
                 )}
 
                 {type === 'password' && (
