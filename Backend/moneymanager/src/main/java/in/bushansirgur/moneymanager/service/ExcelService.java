@@ -17,21 +17,6 @@ import java.util.stream.IntStream;
 @Service
 public class ExcelService {
 
-    // ROOT CAUSE OF "only income downloaded" — Apache POI 5.x bug with HTTP streams:
-    //
-    // XSSFWorkbook.write(OutputStream) in POI 5.x calls OPCPackage.close() internally
-    // after writing. When the target stream is the HTTP response stream
-    // (HttpServletResponse.getOutputStream()), this close() signals EOF to the
-    // servlet container before the full xlsx zip is flushed. The browser receives
-    // a truncated file. For writeFullReportToExcel this means the Incomes sheet is
-    // written, then POI closes mid-stream, the Expenses sheet bytes are lost, and
-    // Excel opens the file showing only Sheet 1 (Incomes).
-    //
-    // FIX: write the workbook to an in-memory ByteArrayOutputStream first.
-    // POI can open/close its internal zip on baos freely — no impact on HTTP.
-    // Then copy all bytes to the HTTP stream in one atomic write.
-    // This pattern is applied to all three methods for consistency.
-
     public void writeIncomesToExcel(OutputStream httpStream, List<IncomeDTO> incomes) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (Workbook workbook = new XSSFWorkbook()) {
@@ -76,7 +61,6 @@ public class ExcelService {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (Workbook workbook = new XSSFWorkbook()) {
 
-            // Sheet 1: Incomes
             Sheet incomeSheet = workbook.createSheet("Incomes");
             buildHeaderRow(incomeSheet, "S.No", "Name", "Category", "Amount", "Date");
             IntStream.range(0, incomes.size()).forEach(i -> {
@@ -89,7 +73,6 @@ public class ExcelService {
                 row.createCell(4).setCellValue(income.getDate() != null ? income.getDate().toString() : "N/A");
             });
 
-            // Sheet 2: Expenses
             Sheet expenseSheet = workbook.createSheet("Expenses");
             buildHeaderRow(expenseSheet, "S.No", "Name", "Category", "Amount", "Date");
             IntStream.range(0, expenses.size()).forEach(i -> {
@@ -102,10 +85,8 @@ public class ExcelService {
                 row.createCell(4).setCellValue(expense.getDate() != null ? expense.getDate().toString() : "N/A");
             });
 
-            // POI writes both sheets into baos and closes its internal zip — baos is unaffected
             workbook.write(baos);
         }
-        // Both sheets fully buffered — write everything to HTTP stream in one shot
         httpStream.write(baos.toByteArray());
         httpStream.flush();
     }

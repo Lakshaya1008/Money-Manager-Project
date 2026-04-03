@@ -131,12 +131,6 @@ public class ExpenseService {
     }
 
     @Transactional(readOnly = true)
-    public List<ExpenseDTO> getExpensesForUserOnDate(Long profileId, LocalDate date) {
-        return expenseRepository.findByProfileIdAndDate(profileId, date)
-                .stream().map(this::toDTO).toList();
-    }
-
-    @Transactional(readOnly = true)
     public List<ExpenseDTO> getExpensesForUserOnDateRange(Long profileId, LocalDateTime start, LocalDateTime end) {
         return expenseRepository.findByProfileIdAndDateBetween(profileId, start, end)
                 .stream().map(this::toDTO).toList();

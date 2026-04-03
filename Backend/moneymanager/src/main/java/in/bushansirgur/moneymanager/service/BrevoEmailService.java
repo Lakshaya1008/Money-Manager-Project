@@ -12,15 +12,6 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Email service using Brevo (Sendinblue) HTTP API v3.
- * This works on Render free tier where SMTP port 587 is blocked.
- *
- * Required env vars:
- *   BREVO_API_KEY      = xkeysib-...
- *   BREVO_SENDER_EMAIL = noreply@yourdomain.com
- *   BREVO_SENDER_NAME  = Money Manager
- */
 @Service
 @Slf4j
 public class BrevoEmailService {
@@ -36,9 +27,6 @@ public class BrevoEmailService {
     @Value("${brevo.sender.name:Money Manager}")
     private String senderName;
 
-    // Fixed: was new RestTemplate() with no timeouts — if Brevo API is slow or
-    // unreachable, the thread would hang indefinitely blocking request threads.
-    // Now configured with 5s connect timeout and 10s read timeout.
     private final RestTemplate restTemplate = buildRestTemplate();
 
     private static RestTemplate buildRestTemplate() {

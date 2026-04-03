@@ -40,25 +40,6 @@ public class ExcelController {
         excelService.writeExpensesToExcel(response.getOutputStream(), expenses);
     }
 
-    // ROOT CAUSE FIX — "only income downloaded on full report"
-    //
-    // BUG: the previous version passed filterIncomes() and filterExpenses() as
-    // INLINE ARGUMENTS to writeFullReportToExcel(). Java evaluates arguments
-    // left-to-right before calling the method. So execution order was:
-    //
-    //   1. response.getOutputStream()   <- HTTP stream opens, status 200 committed
-    //   2. filterIncomes(...)           <- incomes fetched OK
-    //   3. filterExpenses(...)          <- throws (EAGER fetch bug, see ExpenseEntity)
-    //   4. writeFullReportToExcel()     <- never reached
-    //
-    // Because the stream was opened at step 1, Spring's GlobalExceptionHandler
-    // cannot send back a JSON error — the response is already committed.
-    // The client receives a truncated .xlsx that opens in Excel showing only
-    // the Incomes sheet with no error message shown to the user.
-    //
-    // FIX: fetch BOTH lists before touching the response stream.
-    // If either query throws, it happens before step 1, so Spring CAN return
-    // a proper JSON error response that the frontend can display as a toast.
     @GetMapping("/download/full")
     public void downloadFullReport(
             HttpServletResponse response,
@@ -68,11 +49,9 @@ public class ExcelController {
     ) throws IOException {
         Sort sort = Sort.by(Sort.Direction.DESC, "date");
 
-        // Step 1: fetch both lists — any DB exception here returns a JSON error
         List<IncomeDTO>  incomes  = incomeService.filterIncomes(startDate, endDate, keyword, sort);
         List<ExpenseDTO> expenses = expenseService.filterExpenses(startDate, endDate, keyword, sort);
 
-        // Step 2: both succeeded — now safe to open the binary stream
         String from = startDate != null ? startDate.toLocalDate().toString() : "all";
         String to   = endDate   != null ? endDate.toLocalDate().toString()   : "today";
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");

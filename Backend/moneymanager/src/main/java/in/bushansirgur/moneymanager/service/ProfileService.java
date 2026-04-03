@@ -40,7 +40,6 @@ public class ProfileService {
     @Value("${app.activation.url}")
     private String activationURL;
 
-    // ── Register ──────────────────────────────────────────────────────
     public ProfileDTO registerProfile(ProfileDTO profileDTO) {
         if (profileDTO.getEmail() == null || profileDTO.getEmail().trim().isEmpty()) {
             throw new ValidationException("email", "Email is required");
@@ -72,23 +71,18 @@ public class ProfileService {
                     "Activate your Money Manager account",
                     "Click on the following link to activate your account: " + activationLink);
         } catch (Exception emailEx) {
-            // Email failure must NOT prevent registration — profile is already saved.
-            // Fix: was System.err.println — replaced with proper SLF4J logger so warnings
-            // appear in Render's structured log stream and are searchable.
             log.warn("Failed to send activation email to {}: {}", newProfile.getEmail(), emailEx.getMessage());
         }
 
         return toDTO(newProfile);
     }
 
-    // ── Forgot password — send reset link email ────────────────────────
     public void forgotPassword(String email) {
         if (email == null || email.trim().isEmpty()) {
             throw new ValidationException("email", "Email is required");
         }
         String normalizedEmail = email.toLowerCase().trim();
 
-        // Silently do nothing if email not found — prevents email enumeration attack
         profileRepository.findByEmail(normalizedEmail).ifPresent(profile -> {
             String token = UUID.randomUUID().toString();
             profile.setResetPasswordToken(token);
@@ -102,13 +96,11 @@ public class ProfileService {
                         "Click the following link to reset your password (valid for 1 hour):\n\n" + resetLink +
                                 "\n\nIf you did not request this, please ignore this email.");
             } catch (Exception e) {
-                // Fix: was System.err.println — replaced with proper SLF4J logger.
                 log.warn("Failed to send reset email to {}: {}", normalizedEmail, e.getMessage());
             }
         });
     }
 
-    // ── Reset password — verify token and set new password ────────────
     public void resetPassword(String token, String newPassword) {
         if (token == null || token.trim().isEmpty()) {
             throw new ValidationException("token", "Reset token is required");
@@ -131,7 +123,6 @@ public class ProfileService {
         profileRepository.save(profile);
     }
 
-    // ── Update name only ───────────────────────────────────────────────
     public ProfileDTO updateName(String fullName) {
         if (fullName == null || fullName.trim().isEmpty()) {
             throw new ValidationException("fullName", "Full name cannot be empty");
@@ -142,7 +133,6 @@ public class ProfileService {
         return toDTO(currentProfile);
     }
 
-    // ── Change password (logged in) ────────────────────────────────────
     public void changePassword(String oldPassword, String newPassword) {
         if (oldPassword == null || oldPassword.trim().isEmpty()) {
             throw new ValidationException("oldPassword", "Current password is required");
@@ -158,7 +148,6 @@ public class ProfileService {
         profileRepository.save(currentProfile);
     }
 
-    // ── Activate account ───────────────────────────────────────────────
     public boolean activateProfile(String activationToken) {
         return profileRepository.findByActivationToken(activationToken)
                 .map(profile -> {
@@ -170,7 +159,6 @@ public class ProfileService {
                 .orElse(false);
     }
 
-    // ── Auth helpers ───────────────────────────────────────────────────
     public boolean isAccountActive(String email) {
         return profileRepository.findByEmail(email)
                 .map(ProfileEntity::getIsActive)
@@ -245,7 +233,6 @@ public class ProfileService {
         return response;
     }
 
-    // ── Entity helpers ─────────────────────────────────────────────────
     private boolean isValidEmail(String email) {
         return email != null && email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     }

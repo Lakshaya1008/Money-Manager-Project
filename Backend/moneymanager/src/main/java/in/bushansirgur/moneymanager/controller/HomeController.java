@@ -17,10 +17,6 @@ public class HomeController {
     @Value("${spring.application.name:moneymanager}")
     private String appName;
 
-    // FIXED: was returning plain String ("Application is running") with Content-Type: text/plain.
-    // Every other endpoint returns JSON. backendWakeUp.js calls /health — if anything
-    // ever parsed the response as JSON it would fail silently.
-    // Now returns a consistent JSON object matching the pattern of all other endpoints.
     @GetMapping
     public ResponseEntity<Map<String, Object>> healthCheck() {
         Map<String, Object> response = new LinkedHashMap<>();

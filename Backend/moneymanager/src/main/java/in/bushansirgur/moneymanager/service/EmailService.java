@@ -12,13 +12,6 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-/**
- * Unified email service — tries Brevo HTTP API first (works on Render free tier),
- * falls back to JavaMail SMTP if Brevo is not configured or fails.
- *
- * KEY FIX: sendEmailWithAttachment() now also tries Brevo first.
- * Previously it only used SMTP, which is blocked on Render free tier.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -33,10 +26,7 @@ public class EmailService {
     @Value("${email.use.api:true}")
     private boolean useApiByDefault;
 
-    // ─── Plain / HTML email ───────────────────────────────────────────────────
-
     public void sendEmail(String to, String subject, String body) {
-        // Try Brevo HTTP API first (works on Render free tier)
         if (useApiByDefault && brevoEmailService.isConfigured()) {
             try {
                 brevoEmailService.sendEmail(to, subject, body);
@@ -46,7 +36,6 @@ public class EmailService {
             }
         }
 
-        // Fallback: JavaMail SMTP
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);
@@ -62,17 +51,8 @@ public class EmailService {
         }
     }
 
-    // ─── Email with attachment ────────────────────────────────────────────────
-
-    /**
-     * Send email with a binary attachment.
-     *
-     * FIXED: Now tries Brevo HTTP API first. Previously this only used SMTP,
-     * causing 503 errors on Render free tier (SMTP port 587 is blocked).
-     */
     public void sendEmailWithAttachment(String to, String subject, String body,
                                         byte[] attachment, String filename) {
-        // Try Brevo HTTP API first (supports attachments via Base64)
         if (useApiByDefault && brevoEmailService.isConfigured()) {
             try {
                 brevoEmailService.sendEmailWithAttachment(to, subject, body, attachment, filename);
@@ -83,7 +63,6 @@ public class EmailService {
             }
         }
 
-        // Fallback: JavaMail MIME with attachment
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);

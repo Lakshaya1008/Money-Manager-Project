@@ -10,6 +10,7 @@ import in.bushansirgur.moneymanager.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -20,6 +21,7 @@ public class CategoryService {
     private final ProfileService profileService;
     private final CategoryRepository categoryRepository;
 
+    @Transactional
     public CategoryDTO saveCategory(CategoryDTO categoryDTO) {
         ProfileEntity profile = profileService.getCurrentProfile();
 
@@ -41,12 +43,14 @@ public class CategoryService {
         return toDTO(newCategory);
     }
 
+    @Transactional(readOnly = true)
     public List<CategoryDTO> getCategoriesForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
         List<CategoryEntity> categories = categoryRepository.findByProfileId(profile.getId());
         return categories.stream().map(this::toDTO).toList();
     }
 
+    @Transactional(readOnly = true)
     public List<CategoryDTO> getCategoriesByTypeForCurrentUser(String type) {
         ProfileEntity profile = profileService.getCurrentProfile();
 
@@ -62,6 +66,7 @@ public class CategoryService {
         return entities.stream().map(this::toDTO).toList();
     }
 
+    @Transactional
     public CategoryDTO updateCategory(Long categoryId, CategoryDTO dto) {
         ProfileEntity profile = profileService.getCurrentProfile();
         CategoryEntity existing = categoryRepository.findByIdAndProfileId(categoryId, profile.getId())
@@ -86,6 +91,7 @@ public class CategoryService {
      * FIX: Catch DataIntegrityViolationException when category has linked
      * income/expense records, instead of letting it propagate as a 500.
      */
+    @Transactional
     public void deleteCategory(Long categoryId) {
         ProfileEntity profile = profileService.getCurrentProfile();
         CategoryEntity existing = categoryRepository.findByIdAndProfileId(categoryId, profile.getId())

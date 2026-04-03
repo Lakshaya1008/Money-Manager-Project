@@ -67,18 +67,15 @@ public class ProfileController {
         return ResponseEntity.ok(response);
     }
 
-    // ── NEW: Forgot password — sends reset link email ─────────────────
     @PostMapping("/forgot-password")
     public ResponseEntity<Map<String, Object>> forgotPassword(@RequestBody Map<String, String> body) {
         profileService.forgotPassword(body.get("email"));
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("timestamp", LocalDateTime.now().toString());
-        // Always return success — prevents email enumeration (don't reveal if email exists)
         response.put("message", "If an account with that email exists, a reset link has been sent.");
         return ResponseEntity.ok(response);
     }
 
-    // ── NEW: Reset password — verifies token and sets new password ─────
     @PostMapping("/reset-password")
     public ResponseEntity<Map<String, Object>> resetPassword(@RequestBody Map<String, String> body) {
         profileService.resetPassword(body.get("token"), body.get("newPassword"));

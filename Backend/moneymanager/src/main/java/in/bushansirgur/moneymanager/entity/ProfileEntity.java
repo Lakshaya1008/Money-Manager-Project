@@ -40,7 +40,6 @@ public class ProfileEntity {
     @Column(name = "activation_token")
     private String activationToken;
 
-    // ── Forgot password ───────────────────────────────────────────
     @Column(name = "reset_password_token")
     private String resetPasswordToken;
 

@@ -31,9 +31,6 @@ public class NotificationService {
     @Value("${money.manager.frontend.url}")
     private String frontendUrl;
 
-    // ── Job 1: 10 PM reminder ─────────────────────────────────────────────────
-    // Simple nudge email — no data, no attachment.
-    // Just a link back to the app to remind the user to log today's transactions.
     @Scheduled(cron = "0 0 22 * * *", zone = "Asia/Kolkata")
     public void sendDailyReminder() {
         log.info("Job started: sendDailyReminder()");
@@ -56,10 +53,6 @@ public class NotificationService {
         log.info("Job completed: sendDailyReminder()");
     }
 
-    // ── Job 2: 11 PM full daily report with Excel attachment ──────────────────
-    // Sends a combined HTML summary of today's income AND expenses.
-    // Attaches a full_report_yyyy-MM-dd.xlsx with two sheets (Incomes + Expenses).
-    // Only fires for users who recorded at least one transaction today.
     @Scheduled(cron = "0 0 23 * * *", zone = "Asia/Kolkata")
     public void sendDailyFullReport() {
         log.info("Job started: sendDailyFullReport()");
@@ -73,24 +66,20 @@ public class NotificationService {
 
         for (ProfileEntity profile : profiles) {
             try {
-                // Fetch by profileId directly — scheduler has no security context
                 List<IncomeDTO>  todaysIncomes  = incomeService.getIncomesForUserOnDateRange(
                         profile.getId(), startOfDay, endOfDay);
                 List<ExpenseDTO> todaysExpenses = expenseService.getExpensesForUserOnDateRange(
                         profile.getId(), startOfDay, endOfDay);
 
-                // Nothing recorded today — skip silently
                 if (todaysIncomes.isEmpty() && todaysExpenses.isEmpty()) {
                     continue;
                 }
 
-                // ── HTML email body ───────────────────────────────────────────
                 StringBuilder body = new StringBuilder();
                 body.append("Hi ").append(profile.getFullName()).append(",<br><br>")
                         .append("Here is your complete financial summary for <strong>")
                         .append(dateLabel).append("</strong>.<br><br>");
 
-                // Income table
                 if (!todaysIncomes.isEmpty()) {
                     BigDecimal totalIncome = todaysIncomes.stream()
                             .map(IncomeDTO::getAmount)
@@ -122,7 +111,6 @@ public class NotificationService {
                     body.append("<p style='color:#6b7280;margin-bottom:16px;'>No income recorded today.</p>");
                 }
 
-                // Expense table
                 if (!todaysExpenses.isEmpty()) {
                     BigDecimal totalExpense = todaysExpenses.stream()
                             .map(ExpenseDTO::getAmount)
@@ -158,7 +146,6 @@ public class NotificationService {
                         .append("The full report is attached as an Excel file with separate Income and Expense sheets.")
                         .append("</p><br>Best regards,<br>Money Manager Team");
 
-                // ── Excel attachment (two sheets: Incomes + Expenses) ─────────
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 excelService.writeFullReportToExcel(baos, todaysIncomes, todaysExpenses);
 
@@ -173,7 +160,6 @@ public class NotificationService {
                 log.info("Daily full report sent to {}", profile.getEmail());
 
             } catch (Exception e) {
-                // One user failing must not stop other users from getting their report
                 log.warn("Failed to send daily report to {}: {}", profile.getEmail(), e.getMessage());
             }
         }

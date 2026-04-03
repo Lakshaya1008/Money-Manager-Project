@@ -30,9 +30,6 @@ public class DashboardService {
         List<IncomeDTO> latestIncomes = incomeService.getLatest5IncomesForCurrentUser();
         List<ExpenseDTO> latestExpenses = expenseService.getLatest5ExpensesForCurrentUser();
 
-        // Fixed: previously called getTotalIncomeForCurrentUser() and getTotalExpenseForCurrentUser()
-        // twice each — once for the balance subtraction and once for the map values.
-        // That was 4 SELECT SUM(...) queries where 2 are enough.
         BigDecimal totalIncome = incomeService.getTotalIncomeForCurrentUser();
         BigDecimal totalExpense = expenseService.getTotalExpenseForCurrentUser();
 
@@ -61,9 +58,6 @@ public class DashboardService {
                                 .updatedAt(expense.getUpdatedAt())
                                 .type("expense")
                                 .build()))
-                // Fixed: null-safe comparator — getDate() could theoretically be null
-                // if a record was inserted with a null date bypassing @PrePersist.
-                // Previously b.getDate().compareTo(a.getDate()) would NPE in that case.
                 .sorted((a, b) -> {
                     if (a.getDate() == null) return 1;
                     if (b.getDate() == null) return -1;

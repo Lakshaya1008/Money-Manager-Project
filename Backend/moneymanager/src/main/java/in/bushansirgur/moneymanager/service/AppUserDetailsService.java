@@ -17,19 +17,8 @@ public class AppUserDetailsService implements UserDetailsService {
 
     private final ProfileRepository profileRepository;
 
-    /**
-     * FIX: Normalize email to lowercase before lookup.
-     *
-     * Without this, a user who registers as "John@Gmail.com" cannot login
-     * with "john@gmail.com" because findByEmail() is case-sensitive.
-     *
-     * Spring Security calls this during JWT filter validation — the username
-     * extracted from the JWT is whatever was used at login time, so both
-     * registration and login must normalize consistently.
-     */
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // Normalize email — critical for case-insensitive login
         String normalizedEmail = username != null ? username.toLowerCase().trim() : username;
 
         ProfileEntity profile = profileRepository.findByEmail(normalizedEmail)
@@ -41,7 +30,7 @@ public class AppUserDetailsService implements UserDetailsService {
         return User.builder()
                 .username(profile.getEmail())
                 .password(profile.getPassword())
-                .disabled(!isActive)          // locks out inactive accounts
+                .disabled(!isActive)
                 .accountLocked(false)
                 .accountExpired(false)
                 .credentialsExpired(false)

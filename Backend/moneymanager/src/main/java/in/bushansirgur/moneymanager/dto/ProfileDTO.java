@@ -18,9 +18,6 @@ public class ProfileDTO {
     private String fullName;
     private String email;
 
-    // Fixed: @JsonIgnore prevents this field from ever appearing in API responses.
-    // toDTO() in ProfileService never sets it, but having it serializable at all
-    // is a security risk — if it ever gets accidentally set the hash leaks to clients.
     @JsonIgnore
     private String password;
 

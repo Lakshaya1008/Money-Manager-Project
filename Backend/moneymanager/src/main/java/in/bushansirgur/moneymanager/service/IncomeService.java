@@ -117,7 +117,7 @@ public class IncomeService {
     @Transactional(readOnly = true)
     public BigDecimal getTotalIncomeForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
-        BigDecimal total = incomeRepository.findTotalExpenseByProfileId(profile.getId());
+        BigDecimal total = incomeRepository.findTotalIncomeByProfileId(profile.getId());
         return total != null ? total : BigDecimal.ZERO;
     }
 

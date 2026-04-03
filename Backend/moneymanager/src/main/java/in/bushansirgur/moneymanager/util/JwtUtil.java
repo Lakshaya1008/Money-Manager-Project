@@ -25,7 +25,6 @@ public class JwtUtil {
 
     private SecretKey getSigningKey() {
         byte[] keyBytes;
-        // Try to decode as Base64 first, if fails use as plain string
         try {
             keyBytes = Base64.getDecoder().decode(secret);
         } catch (IllegalArgumentException e) {

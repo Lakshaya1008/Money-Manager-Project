@@ -11,8 +11,5 @@ public interface ProfileRepository extends JpaRepository<ProfileEntity, Long> {
     Optional<ProfileEntity> findByActivationToken(String activationToken);
     Optional<ProfileEntity> findByResetPasswordToken(String resetPasswordToken);
 
-    // Fixed: added for NotificationService — previously it used findAll() which
-    // returned every account including unactivated ones, spamming users who
-    // registered but never confirmed their email.
     List<ProfileEntity> findByIsActiveTrue();
 }

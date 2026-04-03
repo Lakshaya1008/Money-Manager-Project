@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -36,7 +35,4 @@ public interface ExpenseRepository extends JpaRepository<ExpenseEntity, Long> {
     //select * from tbl_expenses where profile_id = ?1 and date between ?2 and ?3 with category fetch
     @Query("SELECT e FROM ExpenseEntity e LEFT JOIN FETCH e.category WHERE e.profile.id = :profileId AND e.date BETWEEN :startDate AND :endDate")
     List<ExpenseEntity> findByProfileIdAndDateBetween(@Param("profileId") Long profileId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
-
-    //select * from tbl_expenses where profile_id = ?1 and date = ?2
-    List<ExpenseEntity> findByProfileIdAndDate(Long profileId, LocalDate date);
 }
