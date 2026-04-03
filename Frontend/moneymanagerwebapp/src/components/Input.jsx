@@ -1,7 +1,7 @@
 import {useState} from "react";
 import {Eye, EyeOff} from "lucide-react";
 
-const Input = ({label, value, onChange, placeholder, type, isSelect, options}) => {
+const Input = ({label, value, onChange, placeholder, type, isSelect, options, name, autoComplete}) => {
     const [showPassword, setShowPassword] = useState(false);
 
     const toggleShowPassword = () => {
@@ -31,7 +31,9 @@ const Input = ({label, value, onChange, placeholder, type, isSelect, options}) =
                         type={type === 'password' ? (showPassword ? 'text' : 'password') : type}
                         placeholder={placeholder}
                         value={value}
-                        onChange={(e) => onChange(e)} />
+                        onChange={(e) => onChange(e)}
+                        name={name}
+                        autoComplete={autoComplete} />
                 )}
 
                 {type === 'password' && (

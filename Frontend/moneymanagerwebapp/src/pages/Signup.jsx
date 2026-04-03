@@ -12,11 +12,6 @@ import uploadProfileImage from "../util/uploadProfileImage.js";
 import Header from "../components/Header.jsx";
 
 const Signup = () => {
-    // FIXED: replaced separate firstName + lastName fields with a single fullName field.
-    // The two-field approach was fragile — "Mary Jane Watson" saved as firstName="Mary",
-    // lastName="Jane Watson" on signup but split back as firstName="Mary", lastName="Jane"
-    // on the Profile page edit modal, losing "Watson". A single fullName field works
-    // correctly for all name formats including single names, hyphenated names, etc.
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -29,22 +24,30 @@ const Signup = () => {
         e.preventDefault();
         setIsLoading(true);
 
-        if (!fullName.trim()) {
+        // Read from FormData as fallback for browser autofill.
+        // Autofill fills the DOM visually but may not trigger React's onChange,
+        // leaving controlled state empty even though the user sees a filled field.
+        const formData = new FormData(e.target);
+        const submittedFullName = fullName || formData.get("fullName") || "";
+        const submittedEmail = email || formData.get("email") || "";
+        const submittedPassword = password || formData.get("password") || "";
+
+        if (!submittedFullName.trim()) {
             setError("Please enter your full name");
             setIsLoading(false);
             return;
         }
-        if (!validateEmail(email)) {
+        if (!validateEmail(submittedEmail)) {
             setError("Please enter a valid email address");
             setIsLoading(false);
             return;
         }
-        if (!password.trim()) {
+        if (!submittedPassword.trim()) {
             setError("Please enter your password");
             setIsLoading(false);
             return;
         }
-        if (password.trim().length < 6) {
+        if (submittedPassword.trim().length < 6) {
             setError("Password must be at least 6 characters");
             setIsLoading(false);
             return;
@@ -60,9 +63,9 @@ const Signup = () => {
             }
 
             const response = await axiosConfig.post(API_ENDPOINTS.REGISTER, {
-                fullName: fullName.trim(),
-                email: email.toLowerCase(),
-                password,
+                fullName: submittedFullName.trim(),
+                email: submittedEmail.toLowerCase(),
+                password: submittedPassword,
                 profileImageUrl,
             });
 
@@ -99,25 +102,31 @@ const Signup = () => {
 
                             <div className="flex flex-col gap-4">
                                 <Input
+                                    name="fullName"
                                     value={fullName}
                                     onChange={(e) => setFullName(e.target.value)}
                                     label="Full Name"
                                     placeholder="e.g., John Doe"
                                     type="text"
+                                    autoComplete="name"
                                 />
                                 <Input
+                                    name="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     label="Email Address"
                                     placeholder="name@example.com"
                                     type="text"
+                                    autoComplete="email"
                                 />
                                 <Input
+                                    name="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     label="Password"
                                     placeholder="Min. 6 characters"
                                     type="password"
+                                    autoComplete="new-password"
                                 />
                             </div>
 
