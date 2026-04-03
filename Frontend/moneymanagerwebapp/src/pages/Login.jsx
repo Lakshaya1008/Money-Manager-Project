@@ -21,12 +21,18 @@ const Login = () => {
         e.preventDefault();
         setIsLoading(true);
 
-        if (!validateEmail(email)) {
+        // FormData fallback handles browser autofill not triggering React onChange.
+        // Autofill fills the DOM visually but controlled state stays empty.
+        const formData = new FormData(e.target);
+        const submittedEmail    = email    || formData.get("email")    || "";
+        const submittedPassword = password || formData.get("password") || "";
+
+        if (!validateEmail(submittedEmail)) {
             setError("Please enter valid email address");
             setIsLoading(false);
             return;
         }
-        if (!password.trim()) {
+        if (!submittedPassword.trim()) {
             setError("Please enter your password");
             setIsLoading(false);
             return;
@@ -35,11 +41,10 @@ const Login = () => {
 
         try {
             const response = await axiosConfig.post(API_ENDPOINTS.LOGIN, {
-                email: email.toLowerCase().trim(),
-                password,
+                email: submittedEmail.toLowerCase().trim(),
+                password: submittedPassword,
             });
             // Backend returns flat object: {token, id, fullName, email, profileImageUrl, ...}
-            // Destructure token out, spread the rest as userData
             const {token, ...userData} = response.data;
             if (token) {
                 login(userData, token);
@@ -70,19 +75,23 @@ const Login = () => {
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <Input
+                                name="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 label="Email Address"
                                 placeholder="name@example.com"
                                 type="text"
+                                autoComplete="email"
                             />
                             <div>
                                 <Input
+                                    name="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     label="Password"
                                     placeholder="*********"
                                     type="password"
+                                    autoComplete="current-password"
                                 />
                                 <div className="flex justify-end mt-1">
                                     <Link
