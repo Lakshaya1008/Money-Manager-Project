@@ -2,6 +2,7 @@ package in.bushansirgur.moneymanager.controller;
 
 import in.bushansirgur.moneymanager.dto.ExpenseDTO;
 import in.bushansirgur.moneymanager.dto.IncomeDTO;
+import in.bushansirgur.moneymanager.exception.ValidationException;
 import in.bushansirgur.moneymanager.service.ExcelService;
 import in.bushansirgur.moneymanager.service.ExpenseService;
 import in.bushansirgur.moneymanager.service.IncomeService;
@@ -48,7 +49,6 @@ public class ExcelController {
             @RequestParam(required = false, defaultValue = "") String keyword
     ) throws IOException {
         Sort sort = Sort.by(Sort.Direction.DESC, "date");
-
         List<IncomeDTO>  incomes  = incomeService.filterIncomes(startDate, endDate, keyword, sort);
         List<ExpenseDTO> expenses = expenseService.filterExpenses(startDate, endDate, keyword, sort);
 
@@ -57,7 +57,6 @@ public class ExcelController {
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setHeader("Content-Disposition",
                 "attachment; filename=full_report_" + from + "_to_" + to + ".xlsx");
-
         excelService.writeFullReportToExcel(response.getOutputStream(), incomes, expenses);
     }
 
@@ -71,6 +70,12 @@ public class ExcelController {
             @RequestParam(required = false, defaultValue = "date") String sortField,
             @RequestParam(required = false, defaultValue = "desc") String sortOrder
     ) throws IOException {
+        // FIX: validate sortField before passing to Sort.by() to prevent JPA exceptions
+        if (!sortField.equals("date") && !sortField.equals("amount") && !sortField.equals("name")) {
+            throw new ValidationException("sortField",
+                    "Invalid sort field '" + sortField + "'. Valid values are: 'date', 'amount', 'name'");
+        }
+
         Sort.Direction direction = "asc".equalsIgnoreCase(sortOrder)
                 ? Sort.Direction.ASC : Sort.Direction.DESC;
         Sort sort = Sort.by(direction, sortField);
